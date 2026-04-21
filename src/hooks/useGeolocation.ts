@@ -48,7 +48,7 @@ export function useGeolocation() {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-          { headers: { "User-Agent": "GTACRM/1.0" } }
+          { headers: { "User-Agent": "FLYVENTOCRM/1.0" } }
         );
         const data = await res.json();
         address = data.display_name || null;

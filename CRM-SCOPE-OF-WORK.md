@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Build a **Travel Industry CRM** (Customer Relationship Management) web application for a multi-national travel company (GTA Travel). The system manages leads, accounts, contacts, activities, and business operations across multiple business lines, regions, countries, and branches. The CRM must support role-based access control with three user tiers (Super Admin, Admin, Standard) and a modular architecture where modules can be enabled/disabled.
+Build a **Travel Industry CRM** (Customer Relationship Management) web application for a multi-national travel company (Flyvento). The system manages leads, accounts, contacts, activities, and business operations across multiple business lines, regions, countries, and branches. The CRM must support role-based access control with three user tiers (Super Admin, Admin, Standard) and a modular architecture where modules can be enabled/disabled.
 
 ---
 

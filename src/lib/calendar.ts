@@ -33,7 +33,7 @@ export function generateICSFile(event: MeetingEvent): string {
   let ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//GTA CRM//Meeting//EN",
+    "PRODID:-//FLYVENTO CRM//Meeting//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:REQUEST",
     "BEGIN:VEVENT",

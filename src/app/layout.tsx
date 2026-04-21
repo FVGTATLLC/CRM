@@ -8,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "GTA CRM",
-  description: "Customer Relationship Management System for GTA Travel",
+  title: "FLYVENTO CRM",
+  description: "Customer Relationship Management System for Flyvento",
 };
 
 export default function RootLayout({

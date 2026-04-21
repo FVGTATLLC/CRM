@@ -140,17 +140,17 @@ export default function Sidebar() {
           )}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg brand-gradient text-sm font-bold text-white">
-            G
+            F
           </span>
           <span className="whitespace-nowrap text-lg font-semibold text-gray-900">
-            GTA CRM
+            FLYVENTO CRM
           </span>
         </div>
 
         {/* Compact logo (collapsed mode) */}
         {!expanded && (
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg brand-gradient text-sm font-bold text-white">
-            G
+            F
           </span>
         )}
 

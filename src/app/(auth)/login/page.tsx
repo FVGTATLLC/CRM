@@ -49,7 +49,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">GTA CRM</h1>
+          <h1 className="text-2xl font-bold text-gray-900">FLYVENTO CRM</h1>
           <p className="text-gray-500 mt-1">Sign in to your account</p>
         </div>
 
@@ -73,7 +73,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="admin@gta.com"
+                placeholder="admin@flyvento.co.in"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
@@ -118,8 +118,8 @@ export default function LoginPage() {
           <div className="mt-6 pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-500 text-center mb-2">Demo Credentials</p>
             <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
-              <p><span className="font-medium">Super Admin:</span> admin@gta.com / admin123</p>
-              <p><span className="font-medium">Standard:</span> user@gta.com / user123</p>
+              <p><span className="font-medium">Super Admin:</span> admin@flyvento.co.in / admin123</p>
+              <p><span className="font-medium">Standard:</span> user@flyvento.co.in / user123</p>
             </div>
           </div>
         </div>

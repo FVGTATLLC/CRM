@@ -50,7 +50,7 @@ export default function HotelLeadForm() {
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">Hotel Partnership Inquiry</h2>
-        <p className="text-sm text-gray-500 mt-1">Interested in partnering with GTA Travel? Tell us about your property.</p>
+        <p className="text-sm text-gray-500 mt-1">Interested in partnering with Flyvento? Tell us about your property.</p>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
