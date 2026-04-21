@@ -572,9 +572,8 @@ export default function LeadsPage() {
         onChange={handleFieldChange}
         options={[
           { label: "New", value: "New" },
-          { label: "Engaged", value: "Engaged" },
-          { label: "Negotiation", value: "Negotiation" },
-          { label: "Signed", value: "Signed" },
+          { label: "Quotation Sent", value: "Quotation Sent" },
+          { label: "Closed", value: "Closed" },
           { label: "Lost", value: "Lost" },
         ]}
       />
