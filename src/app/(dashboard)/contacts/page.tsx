@@ -165,10 +165,6 @@ export default function ContactsPage() {
           updated.roleTag = "";
         }
       }
-      // When switching to Retail Customer, clear Company (not applicable)
-      if (name === "customerCategory" && String(value) === "Retail") {
-        updated.company = "";
-      }
       return updated;
     });
   };
@@ -179,12 +175,8 @@ export default function ContactsPage() {
       return;
     }
     if (form.customerCategory === "Corporate") {
-      if (!form.company.trim()) {
-        alert("Company name is required for Corporate Account contacts");
-        return;
-      }
       if (!form.accountId) {
-        alert("Account is required");
+        alert("Corporate Account Name is required");
         return;
       }
     }
@@ -211,10 +203,6 @@ export default function ContactsPage() {
 
   const handleUpdate = async () => {
     if (!selectedRow) return;
-    if (form.customerCategory === "Corporate" && !form.company.trim()) {
-      alert("Company name is required for Corporate Account contacts");
-      return;
-    }
     if (form.customerCategory === "Retail" && !form.salutation) {
       alert("Salutation is required for Retail Customer contacts");
       return;
@@ -395,7 +383,7 @@ export default function ContactsPage() {
       </div>
       {!isRetail && (
         <FormField
-          label="Account"
+          label="Corporate Account Name"
           name="accountId"
           type="select"
           value={form.accountId}
@@ -465,16 +453,6 @@ export default function ContactsPage() {
       )}
       {!isRetail && (
         <FormField
-          label="Company"
-          name="company"
-          value={form.company}
-          onChange={handleFieldChange}
-          required={isCorporate}
-          placeholder="Enter company name"
-        />
-      )}
-      {!isRetail && (
-        <FormField
           label="Job Title"
           name="jobTitle"
           value={form.jobTitle}
@@ -491,45 +469,21 @@ export default function ContactsPage() {
           placeholder="Enter department"
         />
       )}
-      {!isRetail && (
+      {!isCorporate && (
         <FormField
-          label="Contact Type"
-          name="contactType"
+          label="Contact Source"
+          name="contactSource"
           type="select"
-          value={form.contactType}
+          value={form.contactSource}
           onChange={handleFieldChange}
           options={[
-            { label: "Customer", value: "Customer" },
-            { label: "Vendor", value: "Vendor" },
-            { label: "Partner", value: "Partner" },
-            { label: "Prospect", value: "Prospect" },
+            { label: "Website", value: "Website" },
+            { label: "Referral", value: "Referral" },
+            { label: "Social Media", value: "SocialMedia" },
+            { label: "Trade Show", value: "TradeShow" },
+            { label: "Cold Call", value: "ColdCall" },
             { label: "Other", value: "Other" },
           ]}
-        />
-      )}
-      <FormField
-        label="Contact Source"
-        name="contactSource"
-        type="select"
-        value={form.contactSource}
-        onChange={handleFieldChange}
-        options={[
-          { label: "Website", value: "Website" },
-          { label: "Referral", value: "Referral" },
-          { label: "Social Media", value: "SocialMedia" },
-          { label: "Trade Show", value: "TradeShow" },
-          { label: "Cold Call", value: "ColdCall" },
-          { label: "Other", value: "Other" },
-        ]}
-      />
-      {!isRetail && (
-        <FormField
-          label="Role Tag"
-          name="roleTag"
-          type="select"
-          value={form.roleTag}
-          onChange={handleFieldChange}
-          options={getRoleTagOptions(selectedAccountType)}
         />
       )}
       <FormField
