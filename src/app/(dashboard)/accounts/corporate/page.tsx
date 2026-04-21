@@ -19,11 +19,6 @@ interface Account {
   industry?: string;
   companySize?: string;
   annualTravelSpend?: number;
-  numberOfTravelers?: number;
-  travelPolicy?: string;
-  bookingVolume?: string;
-  preferredAirlines?: string;
-  preferredHotels?: string;
   website?: string;
   phone?: string;
   email?: string;
@@ -45,11 +40,6 @@ const INITIAL_FORM: Record<string, string> = {
   industry: "",
   companySize: "",
   annualTravelSpend: "",
-  numberOfTravelers: "",
-  travelPolicy: "",
-  bookingVolume: "",
-  preferredAirlines: "",
-  preferredHotels: "",
   annualRevenue: "",
   currency: "USD",
   numberOfEmployees: "",
@@ -132,7 +122,6 @@ export default function CorporateAccountsPage() {
         annualRevenue: form.annualRevenue ? Number(form.annualRevenue) : undefined,
         numberOfEmployees: form.numberOfEmployees ? Number(form.numberOfEmployees) : undefined,
         annualTravelSpend: form.annualTravelSpend ? Number(form.annualTravelSpend) : undefined,
-        numberOfTravelers: form.numberOfTravelers ? Number(form.numberOfTravelers) : undefined,
       };
       await fetchApi("/api/accounts", {
         method: "POST",
@@ -158,7 +147,6 @@ export default function CorporateAccountsPage() {
         annualRevenue: form.annualRevenue ? Number(form.annualRevenue) : undefined,
         numberOfEmployees: form.numberOfEmployees ? Number(form.numberOfEmployees) : undefined,
         annualTravelSpend: form.annualTravelSpend ? Number(form.annualTravelSpend) : undefined,
-        numberOfTravelers: form.numberOfTravelers ? Number(form.numberOfTravelers) : undefined,
       };
       await fetchApi(`/api/accounts/${selectedRow.id}`, {
         method: "PUT",
@@ -192,11 +180,6 @@ export default function CorporateAccountsPage() {
       industry: row.industry ?? "",
       companySize: (row as any).companySize ?? "",
       annualTravelSpend: row.annualTravelSpend != null ? String(row.annualTravelSpend) : "",
-      numberOfTravelers: row.numberOfTravelers != null ? String(row.numberOfTravelers) : "",
-      travelPolicy: (row as any).travelPolicy ?? "",
-      bookingVolume: (row as any).bookingVolume ?? "",
-      preferredAirlines: (row as any).preferredAirlines ?? "",
-      preferredHotels: (row as any).preferredHotels ?? "",
       annualRevenue: row.annualRevenue != null ? String(row.annualRevenue) : "",
       currency: row.currency ?? "USD",
       numberOfEmployees: row.numberOfEmployees != null ? String(row.numberOfEmployees) : "",
@@ -280,20 +263,6 @@ export default function CorporateAccountsPage() {
             { label: "1000+", value: "1000+" },
           ]} />
           <FormField label="Annual Travel Spend" name="annualTravelSpend" type="number" value={form.annualTravelSpend} onChange={handleFieldChange} placeholder="Enter annual travel spend" />
-          <FormField label="Number of Travelers" name="numberOfTravelers" type="number" value={form.numberOfTravelers} onChange={handleFieldChange} placeholder="Enter number of travelers" />
-        </div>
-      </div>
-
-      {/* Travel Details */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Travel Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <FormField label="Travel Policy" name="travelPolicy" type="textarea" value={form.travelPolicy} onChange={handleFieldChange} placeholder="Enter travel policy" rows={2} />
-          </div>
-          <FormField label="Booking Volume" name="bookingVolume" value={form.bookingVolume} onChange={handleFieldChange} placeholder="Enter booking volume" />
-          <FormField label="Preferred Airlines" name="preferredAirlines" value={form.preferredAirlines} onChange={handleFieldChange} placeholder="Enter preferred airlines" />
-          <FormField label="Preferred Hotels" name="preferredHotels" value={form.preferredHotels} onChange={handleFieldChange} placeholder="Enter preferred hotels" />
         </div>
       </div>
 
