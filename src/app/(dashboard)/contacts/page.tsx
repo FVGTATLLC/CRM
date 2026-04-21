@@ -178,12 +178,18 @@ export default function ContactsPage() {
       alert("Please select Customer Category (Corporate Account or Retail Customer)");
       return;
     }
-    if (form.customerCategory === "Corporate" && !form.company.trim()) {
-      alert("Company name is required for Corporate Account contacts");
-      return;
+    if (form.customerCategory === "Corporate") {
+      if (!form.company.trim()) {
+        alert("Company name is required for Corporate Account contacts");
+        return;
+      }
+      if (!form.accountId) {
+        alert("Account is required");
+        return;
+      }
     }
-    if (!form.accountId) {
-      alert("Account is required");
+    if (form.customerCategory === "Retail" && !form.salutation) {
+      alert("Salutation is required for Retail Customer contacts");
       return;
     }
     setSaving(true);
@@ -207,6 +213,10 @@ export default function ContactsPage() {
     if (!selectedRow) return;
     if (form.customerCategory === "Corporate" && !form.company.trim()) {
       alert("Company name is required for Corporate Account contacts");
+      return;
+    }
+    if (form.customerCategory === "Retail" && !form.salutation) {
+      alert("Salutation is required for Retail Customer contacts");
       return;
     }
     setSaving(true);
@@ -383,24 +393,27 @@ export default function ContactsPage() {
           ]}
         />
       </div>
-      <FormField
-        label="Account"
-        name="accountId"
-        type="select"
-        value={form.accountId}
-        onChange={handleFieldChange}
-        required
-        options={accounts.map((a) => ({
-          label: a.accountName,
-          value: a.id,
-        }))}
-      />
+      {!isRetail && (
+        <FormField
+          label="Account"
+          name="accountId"
+          type="select"
+          value={form.accountId}
+          onChange={handleFieldChange}
+          required={isCorporate}
+          options={accounts.map((a) => ({
+            label: a.accountName,
+            value: a.id,
+          }))}
+        />
+      )}
       <FormField
         label="Salutation"
         name="salutation"
         type="select"
         value={form.salutation}
         onChange={handleFieldChange}
+        required={isRetail}
         options={[
           { label: "Mr", value: "Mr" },
           { label: "Mrs", value: "Mrs" },
@@ -440,14 +453,16 @@ export default function ContactsPage() {
         onChange={handleFieldChange}
         placeholder="Enter phone"
       />
-      <FormField
-        label="Mobile"
-        name="mobile"
-        type="tel"
-        value={form.mobile}
-        onChange={handleFieldChange}
-        placeholder="Enter mobile"
-      />
+      {!isRetail && (
+        <FormField
+          label="Mobile"
+          name="mobile"
+          type="tel"
+          value={form.mobile}
+          onChange={handleFieldChange}
+          placeholder="Enter mobile"
+        />
+      )}
       {!isRetail && (
         <FormField
           label="Company"
@@ -458,34 +473,40 @@ export default function ContactsPage() {
           placeholder="Enter company name"
         />
       )}
-      <FormField
-        label="Job Title"
-        name="jobTitle"
-        value={form.jobTitle}
-        onChange={handleFieldChange}
-        placeholder="Enter job title"
-      />
-      <FormField
-        label="Department"
-        name="department"
-        value={form.department}
-        onChange={handleFieldChange}
-        placeholder="Enter department"
-      />
-      <FormField
-        label="Contact Type"
-        name="contactType"
-        type="select"
-        value={form.contactType}
-        onChange={handleFieldChange}
-        options={[
-          { label: "Customer", value: "Customer" },
-          { label: "Vendor", value: "Vendor" },
-          { label: "Partner", value: "Partner" },
-          { label: "Prospect", value: "Prospect" },
-          { label: "Other", value: "Other" },
-        ]}
-      />
+      {!isRetail && (
+        <FormField
+          label="Job Title"
+          name="jobTitle"
+          value={form.jobTitle}
+          onChange={handleFieldChange}
+          placeholder="Enter job title"
+        />
+      )}
+      {!isRetail && (
+        <FormField
+          label="Department"
+          name="department"
+          value={form.department}
+          onChange={handleFieldChange}
+          placeholder="Enter department"
+        />
+      )}
+      {!isRetail && (
+        <FormField
+          label="Contact Type"
+          name="contactType"
+          type="select"
+          value={form.contactType}
+          onChange={handleFieldChange}
+          options={[
+            { label: "Customer", value: "Customer" },
+            { label: "Vendor", value: "Vendor" },
+            { label: "Partner", value: "Partner" },
+            { label: "Prospect", value: "Prospect" },
+            { label: "Other", value: "Other" },
+          ]}
+        />
+      )}
       <FormField
         label="Contact Source"
         name="contactSource"
@@ -501,14 +522,16 @@ export default function ContactsPage() {
           { label: "Other", value: "Other" },
         ]}
       />
-      <FormField
-        label="Role Tag"
-        name="roleTag"
-        type="select"
-        value={form.roleTag}
-        onChange={handleFieldChange}
-        options={getRoleTagOptions(selectedAccountType)}
-      />
+      {!isRetail && (
+        <FormField
+          label="Role Tag"
+          name="roleTag"
+          type="select"
+          value={form.roleTag}
+          onChange={handleFieldChange}
+          options={getRoleTagOptions(selectedAccountType)}
+        />
+      )}
       <FormField
         label="Status"
         name="contactStatus"
