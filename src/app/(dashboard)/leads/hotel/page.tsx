@@ -51,6 +51,8 @@ interface Lead {
   phone?: string;
   company?: string;
   leadStatus: string;
+  estimatedValue?: number | null;
+  currency?: string | null;
   productDetails?: Record<string, string> | null;
   createdAt?: string;
 }
@@ -101,6 +103,8 @@ const INITIAL_FORM: Record<string, string> = {
   // Packages
   travelStartDate: "",
 
+  estimatedValue: "",
+  currency: "USD",
   notes: "",
   leadStatus: "New",
 };
@@ -254,6 +258,8 @@ export default function LeadsPage() {
       phone,
       company,
       leadStatus: form.leadStatus || "New",
+      estimatedValue: form.estimatedValue ? parseFloat(form.estimatedValue) : undefined,
+      currency: form.estimatedValue ? form.currency || "USD" : undefined,
       productDetails,
     };
   }
@@ -361,6 +367,8 @@ export default function LeadsPage() {
       preferredTimings: d.preferredTimings ?? "",
       infants: d.infants ?? "",
       travelStartDate: d.travelStartDate ?? "",
+      estimatedValue: row.estimatedValue != null ? String(row.estimatedValue) : "",
+      currency: row.currency ?? "USD",
       notes: d.notes ?? "",
       leadStatus: row.leadStatus ?? "New",
     });
@@ -396,6 +404,15 @@ export default function LeadsPage() {
       },
     },
     {
+      key: "estimatedValue",
+      label: "Value",
+      sortable: true,
+      render: (value: number | null, row: Lead) =>
+        value != null
+          ? `${row.currency ?? ""} ${Number(value).toLocaleString()}`.trim()
+          : "—",
+    },
+    {
       key: "leadStatus",
       label: "Status",
       sortable: true,
@@ -426,6 +443,12 @@ export default function LeadsPage() {
             ? selectedRow.company
             : `${selectedRow.firstName ?? ""} ${selectedRow.lastName ?? ""}`.trim() || "—",
         });
+        if (selectedRow.estimatedValue != null) {
+          baseFields.push({
+            label: "Value",
+            value: `${selectedRow.currency ?? ""} ${Number(selectedRow.estimatedValue).toLocaleString()}`.trim(),
+          });
+        }
 
         const detailFields: { label: string; value: string }[] = [];
         if (rowKind === "hotels") {
@@ -576,6 +599,30 @@ export default function LeadsPage() {
         </>
       )}
 
+      <FormField
+        label="Lead Value"
+        name="estimatedValue"
+        type="number"
+        value={form.estimatedValue}
+        onChange={handleFieldChange}
+        placeholder="0.00"
+      />
+      <FormField
+        label="Currency"
+        name="currency"
+        type="select"
+        value={form.currency}
+        onChange={handleFieldChange}
+        options={[
+          { label: "USD", value: "USD" },
+          { label: "AED", value: "AED" },
+          { label: "INR", value: "INR" },
+          { label: "GBP", value: "GBP" },
+          { label: "EUR", value: "EUR" },
+          { label: "KES", value: "KES" },
+          { label: "THB", value: "THB" },
+        ]}
+      />
       <FormField
         label="Status"
         name="leadStatus"
