@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
-  Building,
   Hotel,
   Contact,
   Briefcase,
@@ -65,7 +64,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Corporate Leads", icon: Building2, href: "/leads/corporate" },
   { label: "Lead Management", icon: Hotel, href: "/leads/hotel" },
   { label: "Corporate Accounts", icon: Briefcase, href: "/accounts/corporate" },
-  { label: "Hotel Accounts", icon: Building, href: "/accounts/hotel" },
   { label: "Meetings", icon: Calendar, href: "/activities/meetings" },
   { label: "Call Logs", icon: Phone, href: "/activities/calls" },
   { label: "MOM", icon: FileText, href: "/activities/mom" },
