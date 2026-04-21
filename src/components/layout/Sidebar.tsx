@@ -77,7 +77,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Roles", icon: Shield, href: "/roles" },
   { label: "Contacts", icon: Contact, href: "/contacts" },
   { label: "Corporate Leads", icon: Building2, href: "/leads/corporate" },
-  { label: "Hotel Leads", icon: Hotel, href: "/leads/hotel" },
+  { label: "Lead Management", icon: Hotel, href: "/leads/hotel" },
   { label: "Corporate Accounts", icon: Briefcase, href: "/accounts/corporate" },
   { label: "Hotel Accounts", icon: Building, href: "/accounts/hotel" },
   { label: "Meetings", icon: Calendar, href: "/activities/meetings" },

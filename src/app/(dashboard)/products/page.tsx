@@ -77,8 +77,6 @@ const HOTEL_FIELDS = [
 
 const CAR_FIELDS = [
   "city",
-  "pickupPoint",
-  "dropoffPoint",
   "serviceType",
   "fixedTimeDuration",
   "heroTag",
@@ -408,8 +406,6 @@ export default function ProductsPage() {
         title: "Car Rental Details",
         fields: [
           detailField("Service City", "city"),
-          detailField("Pick-up Point", "pickupPoint"),
-          detailField("Drop-off Point", "dropoffPoint"),
           detailField("Service Type", "serviceType"),
           detailField("Fixed Time Duration", "fixedTimeDuration"),
           detailField("Hero Tag", "heroTag"),
@@ -626,18 +622,6 @@ export default function ProductsPage() {
         label="Vehicle / Service City"
         name="city"
         value={form.city ?? ""}
-        onChange={handleFieldChange}
-      />
-      <FormField
-        label="Pick-up Point"
-        name="pickupPoint"
-        value={form.pickupPoint ?? ""}
-        onChange={handleFieldChange}
-      />
-      <FormField
-        label="Drop-off Point"
-        name="dropoffPoint"
-        value={form.dropoffPoint ?? ""}
         onChange={handleFieldChange}
       />
       <FormField

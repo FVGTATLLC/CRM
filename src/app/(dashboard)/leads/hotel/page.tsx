@@ -1,117 +1,112 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import DataTable from "@/components/table/DataTable";
 import FormModal from "@/components/forms/FormModal";
 import FormField from "@/components/forms/FormField";
 import ReadView from "@/components/forms/ReadView";
-import ActivityTimeline from "@/components/timeline/ActivityTimeline";
 import { useApi } from "@/hooks/useAuth";
-import { formatDate } from "@/lib/utils";
 import type { ColumnDef } from "@/components/table/DataTable";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-interface Lead {
+type CategoryKind = "hotels" | "carRentals" | "excursions" | "packages" | "other";
+
+interface CategoryOption {
   id: string;
-  leadType?: string;
+  name: string;
+  isActive: boolean;
+}
+
+interface ProductOption {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+}
+
+interface AccountOption {
+  id: string;
+  accountName: string;
+  accountType?: string;
+}
+
+interface ContactOption {
+  id: string;
   firstName: string;
   lastName: string;
   email?: string;
   phone?: string;
-  jobTitle?: string;
-  leadSource?: string;
-  leadStatus: string;
-  rating?: string;
-  estimatedValue?: number;
-  currency?: string;
-  description?: string;
-  city?: string;
-  country?: string;
-  remarks?: string;
-  assignedToId?: string;
-  formSource?: string;
-  utmSource?: string;
-  utmMedium?: string;
-  utmCampaign?: string;
-  isConverted?: boolean;
-  convertedToAccountId?: string;
-  createdBy?: string;
-  createdAt?: string;
-  lastModifiedBy?: string;
-  lastModifiedAt?: string;
-  // Hotel-specific
-  hotelName?: string;
-  starRating?: number;
-  numberOfRooms?: number;
-  hotelAmenities?: string;
-  commissionStructure?: string;
-  roomTypes?: string;
-  rateRange?: string;
-  partnershipType?: string;
-  currentDistributionChannels?: string;
 }
 
-interface UserOption {
+interface Lead {
   id: string;
-  firstName?: string;
-  lastName?: string;
+  leadType: string;
+  firstName: string;
+  lastName: string;
   email?: string;
+  phone?: string;
+  company?: string;
+  leadStatus: string;
+  productDetails?: Record<string, string> | null;
+  createdAt?: string;
 }
 
 // ---------------------------------------------------------------------------
-// Status pipeline
+// Helpers
 // ---------------------------------------------------------------------------
-const STATUS_OPTIONS = [
-  { label: "New", value: "New" },
-  { label: "Contacted", value: "Contacted" },
-  { label: "Inspected", value: "Inspected" },
-  { label: "Onboarded", value: "Onboarded" },
-  { label: "Lost", value: "Lost" },
-];
+function detectCategoryKind(categoryName: string): CategoryKind {
+  const c = (categoryName || "").toLowerCase();
+  if (c.includes("hotel")) return "hotels";
+  if (c.includes("car")) return "carRentals";
+  if (c.includes("excursion")) return "excursions";
+  if (c.includes("package")) return "packages";
+  return "other";
+}
 
-// ---------------------------------------------------------------------------
-// Initial form state
-// ---------------------------------------------------------------------------
+function hasClientType(kind: CategoryKind): boolean {
+  return kind === "hotels" || kind === "excursions" || kind === "packages";
+}
+
 const INITIAL_FORM: Record<string, string> = {
-  hotelName: "",
-  starRating: "",
-  numberOfRooms: "",
-  city: "",
-  country: "",
-  firstName: "",
-  lastName: "",
-  jobTitle: "",
-  email: "",
-  phone: "",
-  hotelAmenities: "",
-  commissionStructure: "",
-  roomTypes: "",
-  rateRange: "",
-  partnershipType: "",
-  currentDistributionChannels: "",
-  leadSource: "",
+  category: "",
+  productId: "",
+  clientType: "",
+  corporateAccountId: "",
+  contactId: "",
+
+  // Hotels
+  checkInDate: "",
+  checkOutDate: "",
+  adults: "",
+  children: "",
+  rooms: "",
+
+  // Car Rentals
+  pickupDate: "",
+  pickupTime: "",
+  numberOfHours: "",
+  pickupLocation: "",
+  dropoffLocation: "",
+
+  // Excursions
+  excursionDate: "",
+  preferredTimings: "",
+  infants: "",
+
+  // Packages
+  travelStartDate: "",
+
+  notes: "",
   leadStatus: "New",
-  rating: "",
-  estimatedValue: "",
-  currency: "USD",
-  description: "",
-  remarks: "",
-  assignedToId: "",
-  formSource: "",
-  utmSource: "",
-  utmMedium: "",
-  utmCampaign: "",
 };
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export default function HotelLeadsPage() {
+export default function LeadsPage() {
   const { fetchApi } = useApi();
-  const router = useRouter();
 
   const [data, setData] = useState<Lead[]>([]);
   const [total, setTotal] = useState(0);
@@ -124,40 +119,40 @@ export default function HotelLeadsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [readOpen, setReadOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<Lead | null>(null);
-  const [form, setForm] = useState(INITIAL_FORM);
+  const [form, setForm] = useState<Record<string, string>>(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
-  const [converting, setConverting] = useState(false);
 
-  const [users, setUsers] = useState<UserOption[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
+  const [contacts, setContacts] = useState<ContactOption[]>([]);
 
-  // ---- Fetch users for assignment dropdown -----------------------------------
   useEffect(() => {
-    (async () => {
+    const loadAll = async () => {
       try {
-        const res = await fetchApi<{ data: UserOption[] }>("/api/users?limit=500");
-        setUsers(res.data ?? []);
+        const [catRes, prodRes, acctRes, contactRes] = await Promise.all([
+          fetchApi<{ data: CategoryOption[] }>(`/api/product-categories?activeOnly=true`),
+          fetchApi<{ data: ProductOption[] }>(`/api/products?page=1&limit=500`),
+          fetchApi<{ data: AccountOption[] }>(`/api/accounts?accountType=Corporate&page=1&limit=500`),
+          fetchApi<{ data: ContactOption[] }>(`/api/contacts?page=1&limit=500`),
+        ]);
+        setCategories(catRes.data ?? []);
+        setProducts(prodRes.data ?? []);
+        setAccounts(acctRes.data ?? []);
+        setContacts(contactRes.data ?? []);
       } catch {
-        setUsers([]);
+        // ignore
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    };
+    loadAll();
+  }, [fetchApi]);
 
-  const userOptions = useMemo(
-    () =>
-      users.map((u) => ({
-        label: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email || u.id,
-        value: u.id,
-      })),
-    [users]
-  );
-
-  // ---- Fetch leads -----------------------------------------------------------
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const url = `/api/leads?leadType=Hotel&page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`;
-      const res = await fetchApi<{ data: Lead[]; total: number }>(url);
+      const res = await fetchApi<{ data: Lead[]; total: number }>(
+        `/api/leads?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+      );
       setData(res.data ?? []);
       setTotal(res.total ?? 0);
     } catch {
@@ -172,36 +167,137 @@ export default function HotelLeadsPage() {
     fetchData();
   }, [fetchData]);
 
-  // ---- Field change handler --------------------------------------------------
+  const kind = detectCategoryKind(form.category);
+
+  const filteredProducts = useMemo(
+    () => products.filter((p) => p.category === form.category),
+    [products, form.category]
+  );
+
   const handleFieldChange = (name: string, value: string | number) => {
-    setForm((prev) => ({ ...prev, [name]: String(value) }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: String(value) };
+      if (name === "category") {
+        next.productId = "";
+        next.clientType = "";
+        next.corporateAccountId = "";
+        next.contactId = "";
+      }
+      if (name === "clientType") {
+        next.corporateAccountId = "";
+        next.contactId = "";
+      }
+      return next;
+    });
   };
 
-  // ---- CRUD handlers ---------------------------------------------------------
+  function buildPayload(): Record<string, unknown> {
+    let firstName = "";
+    let lastName = "";
+    let email: string | undefined;
+    let phone: string | undefined;
+    let company: string | undefined;
+
+    if (form.clientType === "Corporate" && form.corporateAccountId) {
+      const acct = accounts.find((a) => a.id === form.corporateAccountId);
+      if (acct) {
+        company = acct.accountName;
+        firstName = acct.accountName;
+        lastName = "";
+      }
+    } else if (form.clientType === "Retail" && form.contactId) {
+      const c = contacts.find((x) => x.id === form.contactId);
+      if (c) {
+        firstName = c.firstName;
+        lastName = c.lastName;
+        email = c.email;
+        phone = c.phone;
+      }
+    }
+    if (!firstName) {
+      const p = products.find((x) => x.id === form.productId);
+      firstName = p?.name ?? "Booking";
+      lastName = "";
+    }
+
+    const productDetails: Record<string, string> = {};
+    const keep = (k: string) => {
+      if (form[k]) productDetails[k] = form[k];
+    };
+    keep("category");
+    keep("productId");
+    keep("clientType");
+    keep("corporateAccountId");
+    keep("contactId");
+    keep("notes");
+    const productName = products.find((p) => p.id === form.productId)?.name;
+    if (productName) productDetails.productName = productName;
+
+    if (kind === "hotels") {
+      ["checkInDate", "checkOutDate", "adults", "children", "rooms"].forEach(keep);
+    } else if (kind === "carRentals") {
+      ["pickupDate", "pickupTime", "numberOfHours", "pickupLocation", "dropoffLocation"].forEach(keep);
+    } else if (kind === "excursions") {
+      ["excursionDate", "preferredTimings", "adults", "children", "infants"].forEach(keep);
+    } else if (kind === "packages") {
+      ["travelStartDate", "adults", "children", "infants"].forEach(keep);
+    }
+
+    return {
+      leadType: form.category || "Other",
+      firstName,
+      lastName,
+      email,
+      phone,
+      company,
+      leadStatus: form.leadStatus || "New",
+      productDetails,
+    };
+  }
+
+  const validate = (): string | null => {
+    if (!form.category) return "Category is required";
+    if (!form.productId) return "Product is required";
+    if (hasClientType(kind)) {
+      if (!form.clientType) return "Client Type is required";
+      if (form.clientType === "Corporate" && !form.corporateAccountId) {
+        return "Corporate Account is required";
+      }
+      if (form.clientType === "Retail" && !form.contactId) {
+        return "Retail Contact is required";
+      }
+    }
+    if (kind === "hotels") {
+      if (!form.checkInDate || !form.checkOutDate) return "Check-in and Check-out dates are required";
+    }
+    if (kind === "carRentals") {
+      if (!form.pickupDate || !form.pickupTime || !form.pickupLocation) {
+        return "Pick-up Date, Time, and Location are required";
+      }
+    }
+    if (kind === "excursions" && !form.excursionDate) {
+      return "Excursion Date is required";
+    }
+    if (kind === "packages" && !form.travelStartDate) {
+      return "Travel Start Date is required";
+    }
+    return null;
+  };
+
   const handleCreate = async () => {
+    const err = validate();
+    if (err) return alert(err);
     setSaving(true);
     try {
-      const payload = {
-        ...form,
-        leadType: "Hotel",
-        estimatedValue: form.estimatedValue ? Number(form.estimatedValue) : undefined,
-        starRating: form.starRating ? Number(form.starRating) : undefined,
-        numberOfRooms: form.numberOfRooms ? Number(form.numberOfRooms) : undefined,
-        assignedToId: form.assignedToId || undefined,
-        formSource: form.formSource || undefined,
-        utmSource: form.utmSource || undefined,
-        utmMedium: form.utmMedium || undefined,
-        utmCampaign: form.utmCampaign || undefined,
-      };
       await fetchApi("/api/leads", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(buildPayload()),
       });
       setCreateOpen(false);
       setForm(INITIAL_FORM);
       fetchData();
-    } catch {
-      // handle error
+    } catch (e) {
+      if (e instanceof Error) alert(e.message);
     } finally {
       setSaving(false);
     }
@@ -209,97 +305,61 @@ export default function HotelLeadsPage() {
 
   const handleUpdate = async () => {
     if (!selectedRow) return;
+    const err = validate();
+    if (err) return alert(err);
     setSaving(true);
     try {
-      const payload = {
-        ...form,
-        leadType: "Hotel",
-        estimatedValue: form.estimatedValue ? Number(form.estimatedValue) : undefined,
-        starRating: form.starRating ? Number(form.starRating) : undefined,
-        numberOfRooms: form.numberOfRooms ? Number(form.numberOfRooms) : undefined,
-        assignedToId: form.assignedToId || undefined,
-        formSource: form.formSource || undefined,
-        utmSource: form.utmSource || undefined,
-        utmMedium: form.utmMedium || undefined,
-        utmCampaign: form.utmCampaign || undefined,
-      };
       await fetchApi(`/api/leads/${selectedRow.id}`, {
         method: "PUT",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(buildPayload()),
       });
       setEditOpen(false);
       setSelectedRow(null);
       setForm(INITIAL_FORM);
       fetchData();
-    } catch {
-      // handle error
+    } catch (e) {
+      if (e instanceof Error) alert(e.message);
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (row: Lead) => {
-    if (!confirm("Are you sure you want to delete this lead?")) return;
+    if (!confirm(`Delete this lead? This cannot be undone.`)) return;
     try {
       await fetchApi(`/api/leads/${row.id}`, { method: "DELETE" });
       fetchData();
     } catch {
-      // handle error
+      // ignore
     }
   };
 
-  const handleConvert = async () => {
-    if (!selectedRow) return;
-    if (!confirm("Convert this lead to an account? This action cannot be undone.")) return;
-    setConverting(true);
-    try {
-      await fetchApi(`/api/leads/convert`, {
-        method: "POST",
-        body: JSON.stringify({ leadId: selectedRow.id }),
-      });
-      setReadOpen(false);
-      setSelectedRow(null);
-      fetchData();
-      router.push("/accounts/hotel");
-    } catch {
-      // handle error
-    } finally {
-      setConverting(false);
-    }
-  };
-
-  // ---- Open modals -----------------------------------------------------------
   const openEdit = (row: Lead) => {
     setSelectedRow(row);
+    const d = (row.productDetails as Record<string, string>) || {};
     setForm({
-      hotelName: row.hotelName ?? "",
-      starRating: row.starRating != null ? String(row.starRating) : "",
-      numberOfRooms: row.numberOfRooms != null ? String(row.numberOfRooms) : "",
-      city: row.city ?? "",
-      country: row.country ?? "",
-      firstName: row.firstName ?? "",
-      lastName: row.lastName ?? "",
-      jobTitle: row.jobTitle ?? "",
-      email: row.email ?? "",
-      phone: row.phone ?? "",
-      hotelAmenities: row.hotelAmenities ?? "",
-      commissionStructure: row.commissionStructure ?? "",
-      roomTypes: row.roomTypes ?? "",
-      rateRange: row.rateRange ?? "",
-      partnershipType: row.partnershipType ?? "",
-      currentDistributionChannels: row.currentDistributionChannels ?? "",
-      leadSource: row.leadSource ?? "",
+      ...INITIAL_FORM,
+      category: d.category ?? "",
+      productId: d.productId ?? "",
+      clientType: d.clientType ?? "",
+      corporateAccountId: d.corporateAccountId ?? "",
+      contactId: d.contactId ?? "",
+      checkInDate: d.checkInDate ?? "",
+      checkOutDate: d.checkOutDate ?? "",
+      adults: d.adults ?? "",
+      children: d.children ?? "",
+      rooms: d.rooms ?? "",
+      pickupDate: d.pickupDate ?? "",
+      pickupTime: d.pickupTime ?? "",
+      numberOfHours: d.numberOfHours ?? "",
+      pickupLocation: d.pickupLocation ?? "",
+      dropoffLocation: d.dropoffLocation ?? "",
+      excursionDate: d.excursionDate ?? "",
+      preferredTimings: d.preferredTimings ?? "",
+      infants: d.infants ?? "",
+      travelStartDate: d.travelStartDate ?? "",
+      notes: d.notes ?? "",
       leadStatus: row.leadStatus ?? "New",
-      rating: row.rating ?? "",
-      estimatedValue: row.estimatedValue != null ? String(row.estimatedValue) : "",
-      currency: row.currency ?? "USD",
-      description: row.description ?? "",
-      remarks: row.remarks ?? "",
-      assignedToId: row.assignedToId ?? "",
-      formSource: row.formSource ?? "",
-      utmSource: row.utmSource ?? "",
-      utmMedium: row.utmMedium ?? "",
-      utmCampaign: row.utmCampaign ?? "",
     });
     setEditOpen(true);
   };
@@ -309,495 +369,233 @@ export default function HotelLeadsPage() {
     setReadOpen(true);
   };
 
-  // ---- Status badge colors ---------------------------------------------------
-  const statusColor = (status: string) => {
-    switch (status) {
-      case "New":
-        return "bg-blue-100 text-blue-800";
-      case "Contacted":
-        return "bg-yellow-100 text-yellow-800";
-      case "Inspected":
-        return "bg-cyan-100 text-cyan-800";
-      case "Onboarded":
-        return "bg-green-100 text-green-800";
-      case "Lost":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  // ---- Assigned-to display name helper ----------------------------------------
-  const assignedUserName = useMemo(() => {
-    if (!selectedRow?.assignedToId) return null;
-    const u = users.find((u) => u.id === selectedRow.assignedToId);
-    if (!u) return selectedRow.assignedToId;
-    return `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email || u.id;
-  }, [selectedRow, users]);
-
-  // ---- Column definitions -----------------------------------------------------
   const columns: ColumnDef<Lead>[] = [
+    { key: "leadType", label: "Category", sortable: true },
     {
-      key: "hotelName" as keyof Lead,
-      label: "Hotel Name",
-      sortable: true,
+      key: "productDetails",
+      label: "Product",
+      sortable: false,
+      render: (value: Record<string, string> | null) => value?.productName ?? "—",
     },
-    {
-      key: "starRating" as keyof Lead,
-      label: "Star Rating",
-      sortable: true,
-      render: (value: number) => (value != null ? `${value} Star` : "-"),
-    },
-    {
-      key: "numberOfRooms" as keyof Lead,
-      label: "Rooms",
-      sortable: true,
-    },
-    { key: "city" as keyof Lead, label: "City", sortable: true },
-    { key: "country" as keyof Lead, label: "Country", sortable: true },
     {
       key: "firstName",
-      label: "Contact",
+      label: "Client",
       sortable: true,
-      render: (_value: string, row: Lead) =>
-        `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim(),
+      render: (_v, row) => {
+        if (row.company) return row.company;
+        return `${row.firstName ?? ""} ${row.lastName ?? ""}`.trim() || "—";
+      },
     },
     {
       key: "leadStatus",
       label: "Status",
       sortable: true,
       render: (value: string) => (
-        <span
-          className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${statusColor(value)}`}
-        >
+        <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
           {value}
         </span>
       ),
     },
-    { key: "leadSource", label: "Source", sortable: true },
-    {
-      key: "createdAt",
-      label: "Created At",
-      sortable: true,
-      render: (value: string) => (value ? formatDate(value) : "-"),
-    },
   ];
 
-  // ---- ReadView sections ------------------------------------------------------
   const readSections = selectedRow
-    ? [
-        {
-          title: "Hotel Information",
-          fields: [
-            { label: "Hotel Name", value: selectedRow.hotelName },
-            {
-              label: "Star Rating",
-              value:
-                selectedRow.starRating != null
-                  ? `${selectedRow.starRating} Star`
-                  : null,
-            },
-            {
-              label: "Number of Rooms",
-              value:
-                selectedRow.numberOfRooms != null
-                  ? String(selectedRow.numberOfRooms)
-                  : null,
-            },
-            { label: "City", value: selectedRow.city },
-            { label: "Country", value: selectedRow.country },
-          ],
-        },
-        {
-          title: "Primary Contact",
-          fields: [
-            { label: "First Name", value: selectedRow.firstName },
-            { label: "Last Name", value: selectedRow.lastName },
-            { label: "Job Title", value: selectedRow.jobTitle },
-            { label: "Email", value: selectedRow.email },
-            { label: "Phone", value: selectedRow.phone },
-          ],
-        },
-        {
-          title: "Hotel Details",
-          fields: [
-            { label: "Amenities", value: selectedRow.hotelAmenities },
-            { label: "Commission Structure", value: selectedRow.commissionStructure },
-            { label: "Room Types", value: selectedRow.roomTypes },
-            { label: "Rate Range", value: selectedRow.rateRange },
-            { label: "Partnership Type", value: selectedRow.partnershipType },
-            { label: "Distribution Channels", value: selectedRow.currentDistributionChannels },
-          ],
-        },
-        {
-          title: "Lead Details",
-          fields: [
-            { label: "Lead Source", value: selectedRow.leadSource },
-            {
-              label: "Lead Status",
-              value: selectedRow.leadStatus,
-              isBadge: true,
-            },
-            { label: "Rating", value: selectedRow.rating },
-            {
-              label: "Estimated Value",
-              value:
-                selectedRow.estimatedValue != null
-                  ? `${selectedRow.currency ?? ""} ${selectedRow.estimatedValue}`
-                  : null,
-            },
-            { label: "Assigned To", value: assignedUserName },
-          ],
-        },
-        {
-          title: "UTM Tracking",
-          fields: [
-            { label: "UTM Source", value: selectedRow.utmSource },
-            { label: "UTM Medium", value: selectedRow.utmMedium },
-            { label: "UTM Campaign", value: selectedRow.utmCampaign },
-            { label: "Form Source", value: selectedRow.formSource },
-          ],
-        },
-        {
-          title: "Conversion Status",
-          fields: [
-            {
-              label: "Converted to Account",
-              value: selectedRow.isConverted ? "Yes" : "No",
-              isBadge: true,
-            },
-            {
-              label: "Converted Account",
-              value: selectedRow.convertedToAccountId ? "View Account \u2192" : "\u2014",
-            },
-          ],
-        },
-        {
-          title: "System Information",
-          fields: [
-            { label: "Description", value: selectedRow.description },
-            { label: "Remarks", value: selectedRow.remarks },
-            { label: "Created By", value: selectedRow.createdBy },
-            { label: "Created At", value: selectedRow.createdAt },
-            { label: "Last Modified By", value: selectedRow.lastModifiedBy },
-            { label: "Last Modified At", value: selectedRow.lastModifiedAt },
-          ],
-        },
-      ]
+    ? (() => {
+        const d = (selectedRow.productDetails as Record<string, string>) || {};
+        const rowKind = detectCategoryKind(selectedRow.leadType);
+
+        const baseFields: { label: string; value: string }[] = [
+          { label: "Category", value: selectedRow.leadType },
+          { label: "Product", value: d.productName ?? "—" },
+        ];
+        if (d.clientType) {
+          baseFields.push({ label: "Client Type", value: d.clientType });
+        }
+        baseFields.push({
+          label: "Client",
+          value: selectedRow.company
+            ? selectedRow.company
+            : `${selectedRow.firstName ?? ""} ${selectedRow.lastName ?? ""}`.trim() || "—",
+        });
+
+        const detailFields: { label: string; value: string }[] = [];
+        if (rowKind === "hotels") {
+          detailFields.push(
+            { label: "Check-in Date", value: d.checkInDate ?? "" },
+            { label: "Check-out Date", value: d.checkOutDate ?? "" },
+            { label: "Adults", value: d.adults ?? "" },
+            { label: "Children", value: d.children ?? "" },
+            { label: "Rooms", value: d.rooms ?? "" }
+          );
+        } else if (rowKind === "carRentals") {
+          detailFields.push(
+            { label: "Pick-up Date", value: d.pickupDate ?? "" },
+            { label: "Pick-up Time", value: d.pickupTime ?? "" },
+            { label: "Number of Hours", value: d.numberOfHours ?? "" },
+            { label: "Pick-up Location", value: d.pickupLocation ?? "" },
+            { label: "Drop-off Location", value: d.dropoffLocation ?? "" }
+          );
+        } else if (rowKind === "excursions") {
+          detailFields.push(
+            { label: "Excursion Date", value: d.excursionDate ?? "" },
+            { label: "Preferred Timings", value: d.preferredTimings ?? "" },
+            { label: "Adults", value: d.adults ?? "" },
+            { label: "Children", value: d.children ?? "" },
+            { label: "Infants", value: d.infants ?? "" }
+          );
+        } else if (rowKind === "packages") {
+          detailFields.push(
+            { label: "Travel Start Date", value: d.travelStartDate ?? "" },
+            { label: "Adults", value: d.adults ?? "" },
+            { label: "Children", value: d.children ?? "" },
+            { label: "Infants", value: d.infants ?? "" }
+          );
+        }
+
+        return [
+          { title: "Lead Info", fields: baseFields },
+          ...(detailFields.length ? [{ title: "Booking Details", fields: detailFields }] : []),
+          { title: "Notes", fields: [{ label: "Notes", value: d.notes ?? "" }] },
+        ];
+      })()
     : [];
 
-  // ---- Form fields renderer ---------------------------------------------------
   const renderFormFields = () => (
-    <div className="space-y-6">
-      {/* Hotel Info */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Hotel Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField
+        label="Category"
+        name="category"
+        type="select"
+        value={form.category}
+        onChange={handleFieldChange}
+        required
+        options={categories.map((c) => ({ label: c.name, value: c.name }))}
+      />
+
+      {form.category && (
+        <FormField
+          label="Product"
+          name="productId"
+          type="select"
+          value={form.productId}
+          onChange={handleFieldChange}
+          required
+          options={filteredProducts.map((p) => ({ label: p.name, value: p.id }))}
+        />
+      )}
+
+      {form.category && hasClientType(kind) && (
+        <>
           <FormField
-            label="Hotel Name"
-            name="hotelName"
-            value={form.hotelName}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter hotel name"
-          />
-          <FormField
-            label="Star Rating"
-            name="starRating"
+            label="Client Type"
+            name="clientType"
             type="select"
-            value={form.starRating}
+            value={form.clientType}
             onChange={handleFieldChange}
             required
             options={[
-              { label: "1", value: "1" },
-              { label: "2", value: "2" },
-              { label: "3", value: "3" },
-              { label: "4", value: "4" },
-              { label: "5", value: "5" },
+              { label: "Corporate Client", value: "Corporate" },
+              { label: "Retail Client", value: "Retail" },
             ]}
           />
-          <FormField
-            label="Number of Rooms"
-            name="numberOfRooms"
-            type="number"
-            value={form.numberOfRooms}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter number of rooms"
-          />
-          <FormField
-            label="City"
-            name="city"
-            value={form.city}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter city"
-          />
-          <FormField
-            label="Country"
-            name="country"
-            value={form.country}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter country"
-          />
-        </div>
-      </div>
-
-      {/* Primary Contact */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Primary Contact</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            label="First Name"
-            name="firstName"
-            value={form.firstName}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter first name"
-          />
-          <FormField
-            label="Last Name"
-            name="lastName"
-            value={form.lastName}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter last name"
-          />
-          <FormField
-            label="Job Title"
-            name="jobTitle"
-            value={form.jobTitle}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter job title"
-          />
-          <FormField
-            label="Email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter email"
-          />
-          <FormField
-            label="Phone"
-            name="phone"
-            type="tel"
-            value={form.phone}
-            onChange={handleFieldChange}
-            required
-            placeholder="Enter phone"
-          />
-        </div>
-      </div>
-
-      {/* Hotel Details */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Hotel Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
+          {form.clientType === "Corporate" && (
             <FormField
-              label="Hotel Amenities"
-              name="hotelAmenities"
-              type="textarea"
-              value={form.hotelAmenities}
+              label="Corporate Account"
+              name="corporateAccountId"
+              type="select"
+              value={form.corporateAccountId}
               onChange={handleFieldChange}
-              placeholder="e.g. Pool, Spa, Gym, Restaurant"
+              required
+              options={accounts.map((a) => ({ label: a.accountName, value: a.id }))}
             />
-          </div>
-          <div className="md:col-span-2">
+          )}
+          {form.clientType === "Retail" && (
             <FormField
-              label="Commission Structure"
-              name="commissionStructure"
-              type="textarea"
-              value={form.commissionStructure}
+              label="Retail Contact"
+              name="contactId"
+              type="select"
+              value={form.contactId}
               onChange={handleFieldChange}
-              placeholder="Describe commission structure"
+              required
+              options={contacts.map((c) => ({
+                label: `${c.firstName} ${c.lastName}${c.email ? ` (${c.email})` : ""}`,
+                value: c.id,
+              }))}
             />
-          </div>
-          <FormField
-            label="Room Types"
-            name="roomTypes"
-            value={form.roomTypes}
-            onChange={handleFieldChange}
-            placeholder="e.g. Standard, Deluxe, Suite"
-          />
-          <FormField
-            label="Rate Range"
-            name="rateRange"
-            value={form.rateRange}
-            onChange={handleFieldChange}
-            placeholder="e.g. $100-$500"
-          />
-          <FormField
-            label="Partnership Type"
-            name="partnershipType"
-            type="select"
-            value={form.partnershipType}
-            onChange={handleFieldChange}
-            options={[
-              { label: "Preferred", value: "Preferred" },
-              { label: "Standard", value: "Standard" },
-              { label: "Premium", value: "Premium" },
-              { label: "Exclusive", value: "Exclusive" },
-            ]}
-          />
-          <FormField
-            label="Distribution Channels"
-            name="currentDistributionChannels"
-            value={form.currentDistributionChannels}
-            onChange={handleFieldChange}
-            placeholder="e.g. OTA, Direct, GDS"
-          />
-        </div>
-      </div>
+          )}
+        </>
+      )}
 
-      {/* Lead Details */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Lead Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            label="Lead Source"
-            name="leadSource"
-            type="select"
-            value={form.leadSource}
-            onChange={handleFieldChange}
-            required
-            options={[
-              { label: "Facebook Ads", value: "Facebook Ads" },
-              { label: "LinkedIn Ads", value: "LinkedIn Ads" },
-              { label: "Google Ads", value: "Google Ads" },
-              { label: "Website", value: "Website" },
-              { label: "Referral", value: "Referral" },
-              { label: "Direct", value: "Direct" },
-              { label: "Trade Show", value: "Trade Show" },
-              { label: "Email Campaign", value: "Email Campaign" },
-              { label: "Partner", value: "Partner" },
-              { label: "Other", value: "Other" },
-            ]}
-          />
-          <FormField
-            label="Lead Status"
-            name="leadStatus"
-            type="select"
-            value={form.leadStatus}
-            onChange={handleFieldChange}
-            options={STATUS_OPTIONS}
-          />
-          <FormField
-            label="Rating"
-            name="rating"
-            type="select"
-            value={form.rating}
-            onChange={handleFieldChange}
-            options={[
-              { label: "Hot", value: "Hot" },
-              { label: "Warm", value: "Warm" },
-              { label: "Cold", value: "Cold" },
-            ]}
-          />
-          <FormField
-            label="Estimated Value"
-            name="estimatedValue"
-            type="number"
-            value={form.estimatedValue}
-            onChange={handleFieldChange}
-            placeholder="Enter estimated value"
-          />
-          <FormField
-            label="Currency"
-            name="currency"
-            type="select"
-            value={form.currency}
-            onChange={handleFieldChange}
-            options={[
-              { label: "USD", value: "USD" },
-              { label: "AED", value: "AED" },
-              { label: "GBP", value: "GBP" },
-              { label: "EUR", value: "EUR" },
-              { label: "KES", value: "KES" },
-              { label: "INR", value: "INR" },
-              { label: "THB", value: "THB" },
-            ]}
-          />
-          <FormField
-            label="Assigned To"
-            name="assignedToId"
-            type="select"
-            value={form.assignedToId}
-            onChange={handleFieldChange}
-            options={userOptions}
-          />
-        </div>
-      </div>
+      {kind === "hotels" && form.productId && (
+        <>
+          <FormField label="Check-in Date" name="checkInDate" type="date" value={form.checkInDate} onChange={handleFieldChange} required />
+          <FormField label="Check-out Date" name="checkOutDate" type="date" value={form.checkOutDate} onChange={handleFieldChange} required />
+          <FormField label="Adults" name="adults" type="number" value={form.adults} onChange={handleFieldChange} />
+          <FormField label="Children" name="children" type="number" value={form.children} onChange={handleFieldChange} />
+          <FormField label="Rooms" name="rooms" type="number" value={form.rooms} onChange={handleFieldChange} />
+        </>
+      )}
 
-      {/* UTM */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">UTM Tracking</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            label="UTM Source"
-            name="utmSource"
-            value={form.utmSource}
-            onChange={handleFieldChange}
-            placeholder="e.g. google, facebook"
-          />
-          <FormField
-            label="UTM Medium"
-            name="utmMedium"
-            value={form.utmMedium}
-            onChange={handleFieldChange}
-            placeholder="e.g. cpc, email"
-          />
-          <FormField
-            label="UTM Campaign"
-            name="utmCampaign"
-            value={form.utmCampaign}
-            onChange={handleFieldChange}
-            placeholder="e.g. spring_promo"
-          />
-          <FormField
-            label="Form Source"
-            name="formSource"
-            value={form.formSource}
-            onChange={handleFieldChange}
-            placeholder="e.g. Contact Us, Landing Page"
-          />
-        </div>
-      </div>
+      {kind === "carRentals" && form.productId && (
+        <>
+          <FormField label="Pick-up Date" name="pickupDate" type="date" value={form.pickupDate} onChange={handleFieldChange} required />
+          <FormField label="Pick-up Time" name="pickupTime" value={form.pickupTime} onChange={handleFieldChange} required placeholder="e.g. 14:30" />
+          <FormField label="Number of Hours" name="numberOfHours" type="number" value={form.numberOfHours} onChange={handleFieldChange} />
+          <FormField label="Pick-up Location" name="pickupLocation" value={form.pickupLocation} onChange={handleFieldChange} required />
+          <FormField label="Drop-off Location" name="dropoffLocation" value={form.dropoffLocation} onChange={handleFieldChange} />
+        </>
+      )}
 
-      {/* Notes */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Notes</h3>
-        <div className="grid grid-cols-1 gap-4">
-          <FormField
-            label="Description"
-            name="description"
-            type="textarea"
-            value={form.description}
-            onChange={handleFieldChange}
-            placeholder="Enter description"
-          />
-          <FormField
-            label="Remarks"
-            name="remarks"
-            type="textarea"
-            value={form.remarks}
-            onChange={handleFieldChange}
-            placeholder="Enter remarks"
-          />
-        </div>
+      {kind === "excursions" && form.productId && (
+        <>
+          <FormField label="Excursion Date" name="excursionDate" type="date" value={form.excursionDate} onChange={handleFieldChange} required />
+          <FormField label="Preferred Timings" name="preferredTimings" value={form.preferredTimings} onChange={handleFieldChange} placeholder="e.g. Morning, Afternoon" />
+          <FormField label="Adults" name="adults" type="number" value={form.adults} onChange={handleFieldChange} />
+          <FormField label="Children" name="children" type="number" value={form.children} onChange={handleFieldChange} />
+          <FormField label="Infants" name="infants" type="number" value={form.infants} onChange={handleFieldChange} />
+        </>
+      )}
+
+      {kind === "packages" && form.productId && (
+        <>
+          <FormField label="Travel Start Date" name="travelStartDate" type="date" value={form.travelStartDate} onChange={handleFieldChange} required />
+          <FormField label="Adults" name="adults" type="number" value={form.adults} onChange={handleFieldChange} />
+          <FormField label="Children" name="children" type="number" value={form.children} onChange={handleFieldChange} />
+          <FormField label="Infants" name="infants" type="number" value={form.infants} onChange={handleFieldChange} />
+        </>
+      )}
+
+      <FormField
+        label="Status"
+        name="leadStatus"
+        type="select"
+        value={form.leadStatus}
+        onChange={handleFieldChange}
+        options={[
+          { label: "New", value: "New" },
+          { label: "Engaged", value: "Engaged" },
+          { label: "Negotiation", value: "Negotiation" },
+          { label: "Signed", value: "Signed" },
+          { label: "Lost", value: "Lost" },
+        ]}
+      />
+
+      <div className="md:col-span-2">
+        <FormField
+          label="Notes"
+          name="notes"
+          type="textarea"
+          value={form.notes}
+          onChange={handleFieldChange}
+          rows={3}
+        />
       </div>
     </div>
   );
 
-  // ---- Render -----------------------------------------------------------------
   return (
     <div className="h-full flex flex-col">
       <DataTable<Lead>
-        moduleName="Hotel Lead"
+        moduleName="Lead"
         columns={columns}
         data={data}
         total={total}
@@ -817,83 +615,32 @@ export default function HotelLeadsPage() {
         onExport={() => {}}
       />
 
-      {/* Create Modal */}
-      <FormModal
-        isOpen={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="Create Hotel Lead"
-        size="xl"
-      >
+      <FormModal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create Lead" size="xl">
         {renderFormFields()}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-          <button
-            onClick={() => setCreateOpen(false)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? "Saving..." : "Create"}
-          </button>
+          <button onClick={() => setCreateOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+          <button onClick={handleCreate} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">{saving ? "Saving..." : "Create"}</button>
         </div>
       </FormModal>
 
-      {/* Edit Modal */}
-      <FormModal
-        isOpen={editOpen}
-        onClose={() => setEditOpen(false)}
-        title="Edit Hotel Lead"
-        size="xl"
-      >
+      <FormModal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit Lead" size="xl">
         {renderFormFields()}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-          <button
-            onClick={() => setEditOpen(false)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleUpdate}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? "Saving..." : "Update"}
-          </button>
+          <button onClick={() => setEditOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+          <button onClick={handleUpdate} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">{saving ? "Saving..." : "Update"}</button>
         </div>
       </FormModal>
 
-      {/* Read View */}
       <ReadView
         isOpen={readOpen}
         onClose={() => setReadOpen(false)}
-        title="Hotel Lead Details"
+        title="Lead Details"
         sections={readSections}
         onEdit={() => {
           setReadOpen(false);
           if (selectedRow) openEdit(selectedRow);
         }}
-      >
-        {selectedRow && (
-          <ActivityTimeline relatedToType="Lead" relatedToId={selectedRow.id} />
-        )}
-        {/* Convert to Account button */}
-        {selectedRow && !selectedRow.isConverted && (
-          <div className="mt-4 pt-4 border-t">
-            <button
-              onClick={handleConvert}
-              disabled={converting}
-              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-            >
-              {converting ? "Converting..." : "Convert to Account"}
-            </button>
-          </div>
-        )}
-      </ReadView>
+      />
     </div>
   );
 }

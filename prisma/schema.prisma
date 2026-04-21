@@ -403,6 +403,9 @@ model Lead {
   utmCampaign     String?
   formSource      String?
 
+  // Product-based booking details (Hotels, Car Rentals, Excursions, Packages)
+  productDetails  Json?
+
   // Conversion
   isConverted     Boolean  @default(false)
   convertedAt     DateTime?
