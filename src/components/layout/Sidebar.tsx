@@ -82,7 +82,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "MOM", icon: FileText, href: "/activities/mom" },
   { label: "Check-Ins", icon: MapPin, href: "/activities/check-ins" },
   { label: "Proposals", icon: FileText, href: "/proposals" },
-  { label: "Contracts", icon: ScrollText, href: "/contracts" },
   { label: "KYB Compliance", icon: ShieldCheck, href: "/kyb" },
   { label: "Approvals", icon: CheckSquare, href: "/approvals" },
   { label: "Reports", icon: BarChart3, href: "/reports" },
