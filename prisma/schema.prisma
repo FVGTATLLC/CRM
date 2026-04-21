@@ -764,3 +764,23 @@ model ApprovalStep {
 
   createdAt         DateTime @default(now())
 }
+
+// ==================== PRODUCT MODULE ====================
+
+model Product {
+  id          String   @id @default(cuid())
+  category    String
+  name        String
+  price       Float
+  imageUrl    String?
+  status      String   @default("Active")
+  description String?
+
+  ownerId       String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}

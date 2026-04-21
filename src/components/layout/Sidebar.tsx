@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   BarChart3,
   CheckSquare,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 import { create } from "zustand";
@@ -82,6 +83,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "MOM", icon: FileText, href: "/activities/mom" },
   { label: "Check-Ins", icon: MapPin, href: "/activities/check-ins" },
   { label: "Proposals", icon: FileText, href: "/proposals" },
+  { label: "Products", icon: Package, href: "/products" },
   { label: "KYB Compliance", icon: ShieldCheck, href: "/kyb" },
   { label: "Approvals", icon: CheckSquare, href: "/approvals" },
   { label: "Reports", icon: BarChart3, href: "/reports" },
