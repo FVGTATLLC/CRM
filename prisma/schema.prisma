@@ -1,0 +1,766 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==================== SYSTEM MODULES ====================
+
+model Module {
+  id              String   @id @default(cuid())
+  moduleName      String   @unique
+  moduleShortCode String?
+  apiName         String?
+  moduleCategory  String
+  moduleStatus    String   @default("Active")
+  description     String?
+  detailedNotes   String?
+  accessControl   String   @default("SuperAdmin")
+  enableDisable   String   @default("AlwaysEnable")
+  ownerId         String?
+  ownerName       String?
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  roleModuleAccess RoleModuleAccess[]
+}
+
+model GlobalMaster {
+  id             String   @id @default(cuid())
+  moduleId       String?
+  moduleName     String
+  dropdownId     String?
+  dropdownName   String
+  l1Category     String?
+  l2SubCategory  String?
+  l3Type         String?
+  parentId       String?
+  isActive       Boolean  @default(true)
+  remarks        String?
+  ownerId        String?
+  ownerName      String?
+  createdById    String?
+  createdByName  String?
+  createdAt      DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}
+
+// ==================== SETTINGS & MASTER MODULES ====================
+
+model BusinessLine {
+  id                String   @id @default(cuid())
+  businessLineName  String   @unique
+  businessLineStatus String  @default("Active")
+  remarks           String?
+  ownerId           String?
+  ownerName         String?
+  createdById       String?
+  createdByName     String?
+  createdAt         DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  regions     Region[]
+  branches    Branch[]
+  departments Department[]
+  roles       Role[]
+  users       User[]
+}
+
+model Region {
+  id              String   @id @default(cuid())
+  regionName      String
+  regionCode      String?
+  regionalManager String?
+  regionStatus    String   @default("Active")
+  remarks         String?
+  businessLineId  String
+  businessLine    BusinessLine @relation(fields: [businessLineId], references: [id])
+  ownerId         String?
+  ownerName       String?
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  branches Branch[]
+}
+
+model Country {
+  id                     String   @id @default(cuid())
+  countryName            String   @unique
+  continent              String?
+  subContinent           String?
+  countryCodeISO2        String?
+  countryCodeISO3        String?
+  countryDialingCode     String?
+  countryPresenceStatus  Boolean  @default(false)
+  countryStatus          String   @default("Active")
+  remarks                String?
+  ownerId                String?
+  ownerName              String?
+  createdById            String?
+  createdByName          String?
+  createdAt              DateTime @default(now())
+  lastModifiedById       String?
+  lastModifiedByName     String?
+  lastModifiedAt         DateTime @updatedAt
+
+  branches Branch[]
+  users    User[]
+}
+
+model Branch {
+  id              String   @id @default(cuid())
+  branchCode      String
+  branchFullName  String
+  city            String?
+  branchStatus    String   @default("Active")
+  remarks         String?
+  businessLineId  String
+  businessLine    BusinessLine @relation(fields: [businessLineId], references: [id])
+  regionId        String
+  region          Region @relation(fields: [regionId], references: [id])
+  countryId       String
+  country         Country @relation(fields: [countryId], references: [id])
+  ownerId         String?
+  ownerName       String?
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  users User[]
+}
+
+model Department {
+  id                String   @id @default(cuid())
+  departmentName    String
+  departmentCode    String?
+  departmentStatus  String   @default("Active")
+  remarks           String?
+  businessLineId    String
+  businessLine      BusinessLine @relation(fields: [businessLineId], references: [id])
+  ownerId           String?
+  ownerName         String?
+  createdById       String?
+  createdByName     String?
+  createdAt         DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  roles Role[]
+  users User[]
+}
+
+// ==================== ACCESS CONTROL ====================
+
+model Role {
+  id              String   @id @default(cuid())
+  roleName        String
+  roleDisplayName String?
+  userType        String
+  roleStatus      String   @default("Active")
+  remarks         String?
+  businessLineId  String
+  businessLine    BusinessLine @relation(fields: [businessLineId], references: [id])
+  departmentId    String
+  department      Department @relation(fields: [departmentId], references: [id])
+  ownerId         String?
+  ownerName       String?
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  // Role hierarchy
+  parentRoleId String?
+  parentRole   Role?    @relation("RoleHierarchy", fields: [parentRoleId], references: [id])
+  childRoles   Role[]   @relation("RoleHierarchy")
+
+  moduleAccess RoleModuleAccess[]
+  fieldAccess  RoleFieldAccess[]
+  users        User[]
+}
+
+model RoleModuleAccess {
+  id         String  @id @default(cuid())
+  roleId     String
+  role       Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  moduleId   String
+  module     Module  @relation(fields: [moduleId], references: [id])
+  canCreate  Boolean @default(false)
+  canRead    Boolean @default(false)
+  canUpdate  Boolean @default(false)
+  canDelete  Boolean @default(false)
+  canExport  Boolean @default(false)
+  canImport  Boolean @default(false)
+  canTransfer Boolean @default(false)
+
+  @@unique([roleId, moduleId])
+}
+
+model RoleFieldAccess {
+  id         String  @id @default(cuid())
+  roleId     String
+  role       Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  moduleName String
+  fieldName  String
+  canCreate  Boolean @default(false)
+  canRead    Boolean @default(false)
+  canUpdate  Boolean @default(false)
+  canDelete  Boolean @default(false)
+
+  @@unique([roleId, moduleName, fieldName])
+}
+
+// ==================== USER MODULE ====================
+
+model User {
+  id              String   @id @default(cuid())
+  salutation      String?
+  firstName       String
+  lastName        String
+  username        String   @unique
+  email           String   @unique
+  passwordHash    String
+  phone           String?
+  phoneType       String?
+  dialingCode     String?
+  designation     String?
+  subDepartment   String?
+  teamFunction    String?
+  userType        String   @default("Standard")
+  reportingTo     String?
+  altEscalation   String?
+  timezone        String?
+  language        String?  @default("en")
+  numberFormat    String?
+  dateFormat      String?
+  avatarUrl       String?
+  userStatus      String   @default("Active")
+
+  businessLineId  String?
+  businessLine    BusinessLine? @relation(fields: [businessLineId], references: [id])
+  regionId        String?
+  countryId       String?
+  country         Country? @relation(fields: [countryId], references: [id])
+  branchId        String?
+  branch          Branch?  @relation(fields: [branchId], references: [id])
+  departmentId    String?
+  department      Department? @relation(fields: [departmentId], references: [id])
+  roleId          String?
+  role            Role?    @relation(fields: [roleId], references: [id])
+
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  contacts       Contact[]
+  leads          Lead[]
+  accounts       Account[]
+  activities     Activity[]
+  notifications  Notification[]
+  locationCheckIns LocationCheckIn[]
+  proposals      Proposal[]
+  contracts      Contract[]
+  documents      Document[]
+  emailLogs      EmailLog[]
+  approvalRequests ApprovalRequest[]
+  approvalSteps  ApprovalStep[]
+
+  // Security fields
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+
+  // OAuth tokens for external integrations
+  googleAccessToken   String?
+  googleRefreshToken  String?
+  googleTokenExpiry   DateTime?
+  googleCalendarId    String?
+
+  // Zoho OAuth tokens
+  zohoAccessToken     String?
+  zohoRefreshToken    String?
+  zohoTokenExpiry     DateTime?
+}
+
+// ==================== CORE CRM MODULES ====================
+
+model Contact {
+  id              String   @id @default(cuid())
+  salutation      String?
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  mobile          String?
+  jobTitle        String?
+  department      String?
+  company         String?
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  zipCode         String?
+  contactType     String?
+  contactSource   String?
+  contactStatus   String   @default("Active")
+  roleTag         String?
+  remarks         String?
+  accountId       String?
+  account         Account? @relation(fields: [accountId], references: [id])
+
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  leadType        String
+  segment         String?
+  subSegment      String?
+  type            String?
+  salutation      String?
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  mobile          String?
+  company         String?
+  jobTitle        String?
+  leadSource      String?
+  leadStatus      String   @default("New")
+  rating          String?
+  estimatedValue  Float?
+  currency        String?
+  description     String?
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  zipCode         String?
+  remarks         String?
+  convertedToAccountId String?
+
+  // Corporate-specific fields
+  companyIndustry  String?
+  companySize      String?
+  annualTravelSpend Float?
+  numberOfTravelers Int?
+  travelPolicy     String?
+  preferredAirlines String?
+  preferredHotels  String?
+  travelBookingVolume String?
+  department       String?
+
+  // Hotel-specific fields
+  hotelName        String?
+  starRating       Int?
+  numberOfRooms    Int?
+  hotelAmenities   String?
+  commissionStructure String?
+  roomTypes        String?
+  rateRange        String?
+  partnershipType  String?
+  currentDistributionChannels String?
+
+  // Assignment & Routing
+  assignedToId    String?
+  assignedToName  String?
+
+  // UTM / Source Tracking
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  formSource      String?
+
+  // Conversion
+  isConverted     Boolean  @default(false)
+  convertedAt     DateTime?
+
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}
+
+model Account {
+  id              String   @id @default(cuid())
+  accountName     String
+  accountType     String
+  segment         String?
+  subSegment      String?
+  type            String?
+  industry        String?
+  website         String?
+  phone           String?
+  email           String?
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  zipCode         String?
+  annualRevenue   Float?
+  currency        String?
+  numberOfEmployees Int?
+  accountStatus   String   @default("Active")
+  remarks         String?
+
+  // Corporate-specific fields
+  companySize      String?
+  annualTravelSpend Float?
+  numberOfTravelers Int?
+  travelPolicy     String?
+  bookingVolume    String?
+  preferredAirlines String?
+  preferredHotels  String?
+
+  // Hotel-specific fields
+  hotelName        String?
+  starRating       Int?
+  numberOfRooms    Int?
+  hotelChainGroup  String?
+  hotelAmenities   String?
+  roomTypes        String?
+  rateRange        String?
+  commissionStructure String?
+  distributionChannels String?
+  partnershipType  String?
+
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  contacts       Contact[]
+  proposals      Proposal[]
+  contracts      Contract[]
+  kybChecklist   KybChecklist[]
+  documents      Document[]
+}
+
+model Activity {
+  id              String   @id @default(cuid())
+  activityType    String
+  subject         String
+  description     String?
+  activityDate    DateTime
+  startTime       String?
+  endTime         String?
+  duration        Int?
+  location        String?
+  status          String   @default("Planned")
+  priority        String?  @default("Normal")
+  relatedTo       String?
+  relatedToId     String?
+  relatedToType   String?
+  attendees       String?
+  outcome         String?
+  nextSteps       String?
+  remarks         String?
+
+  // Meeting integration
+  meetingPlatform String?
+  meetingLink     String?
+
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        String
+  title       String
+  description String?
+  actionUrl   String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// ==================== ACTIVITY LOG ====================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  userName    String
+  action      String
+  moduleName  String
+  recordId    String?
+  recordName  String?
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+}
+
+// ==================== LOCATION CHECK-IN ====================
+
+model LocationCheckIn {
+  id                String    @id @default(cuid())
+
+  // Check-in data
+  checkInTime       DateTime  @default(now())
+  checkInLatitude   Float
+  checkInLongitude  Float
+  checkInAddress    String?
+
+  // Check-out data (populated when user checks out)
+  checkOutTime      DateTime?
+  checkOutLatitude  Float?
+  checkOutLongitude Float?
+  checkOutAddress   String?
+
+  // Calculated
+  durationMinutes   Int?
+
+  // Related entity (polymorphic)
+  relatedToType     String?
+  relatedToId       String?
+  relatedToName     String?
+
+  // Purpose / notes
+  purpose           String?
+  remarks           String?
+
+  // Status
+  status            String    @default("CheckedIn")
+
+  // Owner (the sales exec)
+  ownerId           String
+  owner             User      @relation(fields: [ownerId], references: [id])
+
+  // Audit
+  createdById       String?
+  createdByName     String?
+  createdAt         DateTime  @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}
+
+// ==================== PROPOSALS ====================
+
+model Proposal {
+  id              String    @id @default(cuid())
+  title           String
+  linkedToType    String?
+  linkedToId      String?
+  linkedToName    String?
+  value           Float?
+  currency        String?
+  description     String?
+  validUntil      DateTime?
+  status          String    @default("Draft")
+  remarks         String?
+
+  accountId       String?
+  account         Account?  @relation(fields: [accountId], references: [id])
+
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id])
+
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime  @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  contracts      Contract[]
+  documents      Document[] @relation("ProposalDocuments")
+  emailLogs      EmailLog[] @relation("ProposalEmailLogs")
+}
+
+// ==================== CONTRACTS ====================
+
+model Contract {
+  id              String    @id @default(cuid())
+  title           String
+  value           Float?
+  currency        String?
+  startDate       DateTime?
+  endDate         DateTime?
+  status          String    @default("Draft")
+  remarks         String?
+
+  accountId       String
+  account         Account   @relation(fields: [accountId], references: [id])
+  proposalId      String?
+  proposal        Proposal? @relation(fields: [proposalId], references: [id])
+
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id])
+
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime  @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+
+  documents      Document[] @relation("ContractDocuments")
+  emailLogs      EmailLog[] @relation("ContractEmailLogs")
+}
+
+// ==================== DOCUMENTS (Polymorphic) ====================
+
+model Document {
+  id              String   @id @default(cuid())
+  relatedToType   String
+  relatedToId     String
+  relatedToName   String?
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  fileType        String?
+  version         Int      @default(1)
+  remarks         String?
+
+  proposalId      String?
+  proposal        Proposal? @relation("ProposalDocuments", fields: [proposalId], references: [id])
+  contractId      String?
+  contract        Contract? @relation("ContractDocuments", fields: [contractId], references: [id])
+  accountId       String?
+  account         Account?  @relation(fields: [accountId], references: [id])
+
+  uploadedById    String
+  uploadedBy      User     @relation(fields: [uploadedById], references: [id])
+
+  createdAt       DateTime @default(now())
+  lastModifiedAt  DateTime @updatedAt
+}
+
+// ==================== EMAIL LOGS ====================
+
+model EmailLog {
+  id              String   @id @default(cuid())
+  relatedToType   String
+  relatedToId     String
+  relatedToName   String?
+  recipient       String
+  subject         String
+  body            String?
+  sentDate        DateTime?
+  status          String   @default("Draft")
+  remarks         String?
+
+  proposalId      String?
+  proposal        Proposal? @relation("ProposalEmailLogs", fields: [proposalId], references: [id])
+  contractId      String?
+  contract        Contract? @relation("ContractEmailLogs", fields: [contractId], references: [id])
+
+  sentById        String
+  sentBy          User     @relation(fields: [sentById], references: [id])
+
+  createdAt       DateTime @default(now())
+}
+
+// ==================== KYB / COMPLIANCE ====================
+
+model KybChecklist {
+  id              String    @id @default(cuid())
+  documentType    String
+  documentName    String?
+  isUploaded      Boolean   @default(false)
+  isVerified      Boolean   @default(false)
+  verifiedById    String?
+  verifiedByName  String?
+  verifiedAt      DateTime?
+  status          String    @default("Pending")
+  fileUrl         String?
+  fileName        String?
+  remarks         String?
+
+  accountId       String
+  account         Account   @relation(fields: [accountId], references: [id])
+
+  createdById     String?
+  createdByName   String?
+  createdAt       DateTime  @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}
+
+// ==================== APPROVAL WORKFLOW ====================
+
+model ApprovalRequest {
+  id              String   @id @default(cuid())
+  relatedToType   String
+  relatedToId     String
+  relatedToName   String?
+  requestType     String
+  status          String   @default("Pending")
+  currentStep     Int      @default(1)
+  remarks         String?
+
+  requestedById   String
+  requestedBy     User     @relation(fields: [requestedById], references: [id])
+
+  steps           ApprovalStep[]
+
+  createdAt       DateTime @default(now())
+  lastModifiedAt  DateTime @updatedAt
+}
+
+model ApprovalStep {
+  id                String    @id @default(cuid())
+  stepNumber        Int
+  approverRoleId    String?
+  approverId        String?
+  approver          User?     @relation(fields: [approverId], references: [id])
+  status            String    @default("Pending")
+  remarks           String?
+  actionAt          DateTime?
+
+  approvalRequestId String
+  approvalRequest   ApprovalRequest @relation(fields: [approvalRequestId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+}
