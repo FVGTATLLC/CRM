@@ -34,7 +34,7 @@ export async function PUT(
   const { id } = await params;
   try {
     const body = await request.json();
-    const { category, name, price, imageUrl, description, status } = body;
+    const { category, name, price, imageUrl, description, status, details } = body;
 
     const data: Record<string, unknown> = {
       lastModifiedById: user.id,
@@ -55,6 +55,7 @@ export async function PUT(
     if (imageUrl !== undefined) data.imageUrl = imageUrl || null;
     if (description !== undefined) data.description = description || null;
     if (status !== undefined) data.status = status;
+    if (details !== undefined) data.details = details;
 
     const product = await prisma.product.update({ where: { id }, data });
     return NextResponse.json({ success: true, data: product });

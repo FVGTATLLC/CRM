@@ -87,8 +87,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Proposals", icon: FileText, href: "/proposals" },
   { label: "Products", icon: Package, href: "/products" },
   { label: "Product Configuration", icon: Package, href: "/product-configuration", superAdminOnly: true },
-  { label: "KYB Compliance", icon: ShieldCheck, href: "/kyb" },
-  { label: "Approvals", icon: CheckSquare, href: "/approvals" },
   { label: "Reports", icon: BarChart3, href: "/reports" },
   { label: "Audit Logs", icon: ScrollText, href: "/audit-logs" },
   { label: "Profile", icon: UserCircle, href: "/profile" },

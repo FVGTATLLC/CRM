@@ -788,6 +788,7 @@ model Product {
   imageUrl    String?
   status      String   @default("Active")
   description String?
+  details     Json?    // category-specific fields (hotels, car rentals, excursions, packages)
 
   ownerId       String?
   createdById   String?

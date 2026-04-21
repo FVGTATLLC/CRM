@@ -8,6 +8,16 @@ import ReadView from "@/components/forms/ReadView";
 import { useApi } from "@/hooks/useAuth";
 import type { ColumnDef } from "@/components/table/DataTable";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+type ProductCategoryKind =
+  | "hotels"
+  | "carRentals"
+  | "excursions"
+  | "packages"
+  | "generic";
+
 interface Product {
   id: string;
   category: string;
@@ -16,6 +26,7 @@ interface Product {
   imageUrl?: string | null;
   description?: string | null;
   status: string;
+  details?: Record<string, string> | null;
   createdBy?: string;
   createdAt?: string;
   lastModifiedBy?: string;
@@ -28,6 +39,100 @@ interface CategoryOption {
   isActive: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function detectCategoryKind(categoryName: string): ProductCategoryKind {
+  const c = (categoryName || "").toLowerCase();
+  if (c.includes("hotel")) return "hotels";
+  if (c.includes("car")) return "carRentals";
+  if (c.includes("excursion")) return "excursions";
+  if (c.includes("package")) return "packages";
+  return "generic";
+}
+
+const COMMON_FORM_KEYS = [
+  "category",
+  "name",
+  "price",
+  "imageUrl",
+  "description",
+  "status",
+];
+
+const HOTEL_FIELDS = [
+  "unit",
+  "destination",
+  "address",
+  "starRating",
+  "heroTag",
+  "overview",
+  "propertyHighlights",
+  "amenities",
+  "roomTypes",
+  "checkInOut",
+  "propertyRules",
+  "nearbyAttractions",
+];
+
+const CAR_FIELDS = [
+  "city",
+  "pickupPoint",
+  "dropoffPoint",
+  "serviceType",
+  "fixedTimeDuration",
+  "heroTag",
+  "overview",
+  "vehicleHighlights",
+  "features",
+  "inclusions",
+  "policies",
+];
+
+const EXCURSION_FIELDS = [
+  "unit",
+  "destination",
+  "duration",
+  "heroTag",
+  "overview",
+  "highlights",
+  "inclusions",
+  "exclusions",
+  "importantNotes",
+  "timingOptions",
+];
+
+const PACKAGE_FIELDS = [
+  "unit",
+  "destination",
+  "duration",
+  "heroTag",
+  "overview",
+  "highlights",
+  "inclusions",
+  "exclusions",
+  "suggestedHotels",
+  "itinerary",
+];
+
+function buildEmptyDetails(kind: ProductCategoryKind): Record<string, string> {
+  const keys =
+    kind === "hotels"
+      ? HOTEL_FIELDS
+      : kind === "carRentals"
+      ? CAR_FIELDS
+      : kind === "excursions"
+      ? EXCURSION_FIELDS
+      : kind === "packages"
+      ? PACKAGE_FIELDS
+      : [];
+  const out: Record<string, string> = {};
+  for (const k of keys) out[k] = "";
+  // Hotels have a fixed unit display value
+  if (kind === "hotels") out.unit = "Per Room Per Night";
+  return out;
+}
+
 const INITIAL_FORM: Record<string, string> = {
   category: "",
   name: "",
@@ -37,6 +142,9 @@ const INITIAL_FORM: Record<string, string> = {
   status: "Active",
 };
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 export default function ProductsPage() {
   const { fetchApi } = useApi();
 
@@ -51,12 +159,11 @@ export default function ProductsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [readOpen, setReadOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<Product | null>(null);
-  const [form, setForm] = useState(INITIAL_FORM);
+  const [form, setForm] = useState<Record<string, string>>(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
 
   const [categories, setCategories] = useState<CategoryOption[]>([]);
 
-  // Load categories from Product Configuration
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -91,12 +198,42 @@ export default function ProductsPage() {
     fetchData();
   }, [fetchData]);
 
+  const kind = detectCategoryKind(form.category);
+
   const handleFieldChange = (name: string, value: string | number) => {
-    setForm((prev) => ({ ...prev, [name]: String(value) }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: String(value) };
+      if (name === "category") {
+        // Reset all detail fields when switching category
+        const newKind = detectCategoryKind(String(value));
+        // Drop any prior detail keys
+        const cleaned: Record<string, string> = {};
+        for (const k of Object.keys(next)) {
+          if (COMMON_FORM_KEYS.includes(k)) cleaned[k] = next[k];
+        }
+        return { ...cleaned, ...buildEmptyDetails(newKind) };
+      }
+      // If serviceType changed away from "With Driver Fixed Time", clear duration
+      if (name === "serviceType" && String(value) !== "With Driver Fixed Time") {
+        next.fixedTimeDuration = "";
+      }
+      return next;
+    });
   };
 
+  // Pull the details object out of form state
+  function extractDetails(state: Record<string, string>): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const k of Object.keys(state)) {
+      if (!COMMON_FORM_KEYS.includes(k) && state[k] !== "") {
+        out[k] = state[k];
+      }
+    }
+    return out;
+  }
+
   const handleCreate = async () => {
-    if (!form.category.trim()) return alert("Category is required");
+    if (!form.category) return alert("Category is required");
     if (!form.name.trim()) return alert("Name is required");
     if (form.price === "" || isNaN(Number(form.price)) || Number(form.price) < 0) {
       return alert("Price must be a valid non-negative number");
@@ -112,13 +249,14 @@ export default function ProductsPage() {
           imageUrl: form.imageUrl || undefined,
           description: form.description || undefined,
           status: form.status || "Active",
+          details: extractDetails(form),
         }),
       });
       setCreateOpen(false);
       setForm(INITIAL_FORM);
       fetchData();
-    } catch {
-      // handle error
+    } catch (e) {
+      if (e instanceof Error) alert(e.message);
     } finally {
       setSaving(false);
     }
@@ -140,14 +278,15 @@ export default function ProductsPage() {
           imageUrl: form.imageUrl || undefined,
           description: form.description || undefined,
           status: form.status,
+          details: extractDetails(form),
         }),
       });
       setEditOpen(false);
       setSelectedRow(null);
       setForm(INITIAL_FORM);
       fetchData();
-    } catch {
-      // handle error
+    } catch (e) {
+      if (e instanceof Error) alert(e.message);
     } finally {
       setSaving(false);
     }
@@ -165,6 +304,13 @@ export default function ProductsPage() {
 
   const openEdit = (row: Product) => {
     setSelectedRow(row);
+    const rowKind = detectCategoryKind(row.category);
+    const detailsState = buildEmptyDetails(rowKind);
+    if (row.details && typeof row.details === "object") {
+      for (const k of Object.keys(row.details)) {
+        detailsState[k] = String(row.details[k] ?? "");
+      }
+    }
     setForm({
       category: row.category ?? "",
       name: row.name ?? "",
@@ -172,6 +318,7 @@ export default function ProductsPage() {
       imageUrl: row.imageUrl ?? "",
       description: row.description ?? "",
       status: row.status ?? "Active",
+      ...detailsState,
     });
     setEditOpen(true);
   };
@@ -224,6 +371,90 @@ export default function ProductsPage() {
     },
   ];
 
+  // ----- Read view sections (also category-specific) -------------------------
+  function detailField(label: string, key: string): { label: string; value: string } {
+    const v =
+      selectedRow?.details && typeof selectedRow.details === "object"
+        ? String((selectedRow.details as Record<string, unknown>)[key] ?? "")
+        : "";
+    return { label, value: v };
+  }
+
+  let detailsSection:
+    | { title: string; fields: { label: string; value: string }[] }
+    | null = null;
+  if (selectedRow) {
+    const rowKind = detectCategoryKind(selectedRow.category);
+    if (rowKind === "hotels") {
+      detailsSection = {
+        title: "Hotel Details",
+        fields: [
+          detailField("Unit", "unit"),
+          detailField("Destination / City", "destination"),
+          detailField("Address", "address"),
+          detailField("Star Rating", "starRating"),
+          detailField("Hero Tag", "heroTag"),
+          detailField("Overview", "overview"),
+          detailField("Property Highlights", "propertyHighlights"),
+          detailField("Amenities", "amenities"),
+          detailField("Room Types", "roomTypes"),
+          detailField("Check-in / Check-out", "checkInOut"),
+          detailField("Property Rules", "propertyRules"),
+          detailField("Nearby Attractions", "nearbyAttractions"),
+        ],
+      };
+    } else if (rowKind === "carRentals") {
+      detailsSection = {
+        title: "Car Rental Details",
+        fields: [
+          detailField("Service City", "city"),
+          detailField("Pick-up Point", "pickupPoint"),
+          detailField("Drop-off Point", "dropoffPoint"),
+          detailField("Service Type", "serviceType"),
+          detailField("Fixed Time Duration", "fixedTimeDuration"),
+          detailField("Hero Tag", "heroTag"),
+          detailField("Overview", "overview"),
+          detailField("Vehicle Highlights", "vehicleHighlights"),
+          detailField("Features / Amenities", "features"),
+          detailField("Inclusions", "inclusions"),
+          detailField("Policies / Terms", "policies"),
+        ],
+      };
+    } else if (rowKind === "excursions") {
+      detailsSection = {
+        title: "Excursion Details",
+        fields: [
+          detailField("Unit", "unit"),
+          detailField("Destination", "destination"),
+          detailField("Duration", "duration"),
+          detailField("Hero Tag", "heroTag"),
+          detailField("Overview", "overview"),
+          detailField("Highlights", "highlights"),
+          detailField("Inclusions", "inclusions"),
+          detailField("Exclusions", "exclusions"),
+          detailField("Important Notes", "importantNotes"),
+          detailField("Timing Options", "timingOptions"),
+        ],
+      };
+    } else if (rowKind === "packages") {
+      detailsSection = {
+        title: "Package Details",
+        fields: [
+          detailField("Unit", "unit"),
+          detailField("Destination", "destination"),
+          detailField("Duration", "duration"),
+          detailField("Hero Tag", "heroTag"),
+          detailField("Overview", "overview"),
+          detailField("Highlights", "highlights"),
+          detailField("Inclusions", "inclusions"),
+          detailField("Exclusions", "exclusions"),
+          detailField("Suggested Hotels", "suggestedHotels"),
+          detailField("Itinerary", "itinerary"),
+        ],
+      };
+    }
+  }
+
   const readSections = selectedRow
     ? [
         {
@@ -248,6 +479,7 @@ export default function ProductsPage() {
             { label: "Image URL", value: selectedRow.imageUrl ?? "" },
           ],
         },
+        ...(detailsSection ? [detailsSection] : []),
         {
           title: "Audit",
           fields: [
@@ -259,6 +491,420 @@ export default function ProductsPage() {
         },
       ]
     : [];
+
+  // ----- Form fields per category --------------------------------------------
+  const nameLabel =
+    kind === "hotels"
+      ? "Hotel Name"
+      : kind === "carRentals"
+      ? "Car Name"
+      : kind === "packages"
+      ? "Package Name"
+      : "Name";
+
+  const renderHotelFields = () => (
+    <>
+      <FormField
+        label="Unit"
+        name="unit"
+        value={form.unit ?? "Per Room Per Night"}
+        onChange={handleFieldChange}
+        readOnly
+        placeholder="Per Room Per Night"
+      />
+      <FormField
+        label="Hotel Destination / City"
+        name="destination"
+        value={form.destination ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. Dubai"
+      />
+      <div className="md:col-span-2">
+        <FormField
+          label="Hotel Address"
+          name="address"
+          type="textarea"
+          value={form.address ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <FormField
+        label="Star Rating"
+        name="starRating"
+        type="select"
+        value={form.starRating ?? ""}
+        onChange={handleFieldChange}
+        options={[
+          { label: "1 Star", value: "1 Star" },
+          { label: "2 Star", value: "2 Star" },
+          { label: "3 Star", value: "3 Star" },
+          { label: "4 Star", value: "4 Star" },
+          { label: "5 Star", value: "5 Star" },
+        ]}
+      />
+      <FormField
+        label="Hero Tag"
+        name="heroTag"
+        value={form.heroTag ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. Best Family Hotel"
+      />
+      <div className="md:col-span-2">
+        <FormField
+          label="Overview"
+          name="overview"
+          type="textarea"
+          value={form.overview ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Property Highlights"
+          name="propertyHighlights"
+          type="textarea"
+          value={form.propertyHighlights ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Amenities"
+          name="amenities"
+          type="textarea"
+          value={form.amenities ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Room Types"
+          name="roomTypes"
+          type="textarea"
+          value={form.roomTypes ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <FormField
+        label="Check-in / Check-out"
+        name="checkInOut"
+        value={form.checkInOut ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. 14:00 / 12:00"
+      />
+      <div className="md:col-span-2">
+        <FormField
+          label="Property Rules"
+          name="propertyRules"
+          type="textarea"
+          value={form.propertyRules ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Nearby Attractions"
+          name="nearbyAttractions"
+          type="textarea"
+          value={form.nearbyAttractions ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+    </>
+  );
+
+  const renderCarFields = () => (
+    <>
+      <FormField
+        label="Vehicle / Service City"
+        name="city"
+        value={form.city ?? ""}
+        onChange={handleFieldChange}
+      />
+      <FormField
+        label="Pick-up Point"
+        name="pickupPoint"
+        value={form.pickupPoint ?? ""}
+        onChange={handleFieldChange}
+      />
+      <FormField
+        label="Drop-off Point"
+        name="dropoffPoint"
+        value={form.dropoffPoint ?? ""}
+        onChange={handleFieldChange}
+      />
+      <FormField
+        label="Service Type"
+        name="serviceType"
+        type="select"
+        value={form.serviceType ?? ""}
+        onChange={handleFieldChange}
+        options={[
+          { label: "Airport transfer", value: "Airport transfer" },
+          { label: "With Driver Fixed Time", value: "With Driver Fixed Time" },
+          { label: "With Driver one way", value: "With Driver one way" },
+        ]}
+      />
+      {form.serviceType === "With Driver Fixed Time" && (
+        <FormField
+          label="Fixed Time Duration"
+          name="fixedTimeDuration"
+          type="select"
+          value={form.fixedTimeDuration ?? ""}
+          onChange={handleFieldChange}
+          options={[
+            { label: "5 Hour", value: "5 Hour" },
+            { label: "10 Hour", value: "10 Hour" },
+          ]}
+        />
+      )}
+      <FormField
+        label="Hero Tag"
+        name="heroTag"
+        value={form.heroTag ?? ""}
+        onChange={handleFieldChange}
+      />
+      <div className="md:col-span-2">
+        <FormField
+          label="Overview"
+          name="overview"
+          type="textarea"
+          value={form.overview ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Vehicle Highlights"
+          name="vehicleHighlights"
+          type="textarea"
+          value={form.vehicleHighlights ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Features / Amenities"
+          name="features"
+          type="textarea"
+          value={form.features ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Inclusions"
+          name="inclusions"
+          type="textarea"
+          value={form.inclusions ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Policies / Terms"
+          name="policies"
+          type="textarea"
+          value={form.policies ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+    </>
+  );
+
+  const renderExcursionFields = () => (
+    <>
+      <FormField
+        label="Unit"
+        name="unit"
+        value={form.unit ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. Per Person"
+      />
+      <FormField
+        label="Excursion Destination"
+        name="destination"
+        value={form.destination ?? ""}
+        onChange={handleFieldChange}
+      />
+      <FormField
+        label="Duration"
+        name="duration"
+        value={form.duration ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. 4 hours"
+      />
+      <FormField
+        label="Hero Tag"
+        name="heroTag"
+        value={form.heroTag ?? ""}
+        onChange={handleFieldChange}
+      />
+      <div className="md:col-span-2">
+        <FormField
+          label="Overview"
+          name="overview"
+          type="textarea"
+          value={form.overview ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Highlights"
+          name="highlights"
+          type="textarea"
+          value={form.highlights ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Inclusions"
+          name="inclusions"
+          type="textarea"
+          value={form.inclusions ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Exclusions"
+          name="exclusions"
+          type="textarea"
+          value={form.exclusions ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Important Notes"
+          name="importantNotes"
+          type="textarea"
+          value={form.importantNotes ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Timing Options"
+          name="timingOptions"
+          type="textarea"
+          value={form.timingOptions ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+    </>
+  );
+
+  const renderPackageFields = () => (
+    <>
+      <FormField
+        label="Unit"
+        name="unit"
+        value={form.unit ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. Per Person"
+      />
+      <FormField
+        label="Package Destination"
+        name="destination"
+        value={form.destination ?? ""}
+        onChange={handleFieldChange}
+      />
+      <FormField
+        label="Package Duration"
+        name="duration"
+        value={form.duration ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. 5 nights / 6 days"
+      />
+      <FormField
+        label="Hero Tag"
+        name="heroTag"
+        value={form.heroTag ?? ""}
+        onChange={handleFieldChange}
+      />
+      <div className="md:col-span-2">
+        <FormField
+          label="Overview"
+          name="overview"
+          type="textarea"
+          value={form.overview ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Highlights"
+          name="highlights"
+          type="textarea"
+          value={form.highlights ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Inclusions"
+          name="inclusions"
+          type="textarea"
+          value={form.inclusions ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Exclusions"
+          name="exclusions"
+          type="textarea"
+          value={form.exclusions ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Suggested Hotels"
+          name="suggestedHotels"
+          type="textarea"
+          value={form.suggestedHotels ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Itinerary"
+          name="itinerary"
+          type="textarea"
+          value={form.itinerary ?? ""}
+          onChange={handleFieldChange}
+          rows={4}
+        />
+      </div>
+    </>
+  );
 
   const renderFormFields = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -272,12 +918,12 @@ export default function ProductsPage() {
         options={categories.map((c) => ({ label: c.name, value: c.name }))}
       />
       <FormField
-        label="Name"
+        label={nameLabel}
         name="name"
         value={form.name}
         onChange={handleFieldChange}
         required
-        placeholder="Enter product name"
+        placeholder={`Enter ${nameLabel.toLowerCase()}`}
       />
       <FormField
         label="Price ($)"
@@ -299,6 +945,12 @@ export default function ProductsPage() {
           { label: "Inactive", value: "Inactive" },
         ]}
       />
+
+      {kind === "hotels" && renderHotelFields()}
+      {kind === "carRentals" && renderCarFields()}
+      {kind === "excursions" && renderExcursionFields()}
+      {kind === "packages" && renderPackageFields()}
+
       <div className="md:col-span-2">
         <FormField
           label="Product Image URL"
@@ -359,7 +1011,7 @@ export default function ProductsPage() {
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         title="Create Product"
-        size="lg"
+        size="xl"
       >
         {renderFormFields()}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
@@ -383,7 +1035,7 @@ export default function ProductsPage() {
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
         title="Edit Product"
-        size="lg"
+        size="xl"
       >
         {renderFormFields()}
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">

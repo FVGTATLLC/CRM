@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { category, name, price, imageUrl, description, status } = body;
+    const { category, name, price, imageUrl, description, status, details } = body;
 
     if (!category || !name || price === undefined || price === null || price === "") {
       return NextResponse.json(
@@ -87,6 +87,7 @@ export async function POST(request: Request) {
         imageUrl: imageUrl || null,
         description: description || null,
         status: status || "Active",
+        details: details && typeof details === "object" ? details : undefined,
         ownerId: user.id,
         createdById: user.id,
         createdByName: `${user.firstName} ${user.lastName}`,
