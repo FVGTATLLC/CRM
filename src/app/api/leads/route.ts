@@ -151,13 +151,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!lastName) {
-      return NextResponse.json(
-        { success: false, error: "Last name is required" },
-        { status: 400 }
-      );
-    }
-
     // Check for duplicate leads before creation
     const { checkLeadDuplicates } = await import("@/lib/duplicateCheck");
     const duplicateWarnings = await checkLeadDuplicates(email, phone, company);
