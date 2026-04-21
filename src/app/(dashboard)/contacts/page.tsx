@@ -45,6 +45,7 @@ interface Contact {
 }
 
 const INITIAL_FORM: Record<string, string> = {
+  customerCategory: "",
   salutation: "",
   firstName: "",
   lastName: "",
@@ -164,11 +165,23 @@ export default function ContactsPage() {
           updated.roleTag = "";
         }
       }
+      // When switching to Retail Customer, clear Company (not applicable)
+      if (name === "customerCategory" && String(value) === "Retail") {
+        updated.company = "";
+      }
       return updated;
     });
   };
 
   const handleCreate = async () => {
+    if (!form.customerCategory) {
+      alert("Please select Customer Category (Corporate Account or Retail Customer)");
+      return;
+    }
+    if (form.customerCategory === "Corporate" && !form.company.trim()) {
+      alert("Company name is required for Corporate Account contacts");
+      return;
+    }
     if (!form.accountId) {
       alert("Account is required");
       return;
@@ -192,6 +205,10 @@ export default function ContactsPage() {
 
   const handleUpdate = async () => {
     if (!selectedRow) return;
+    if (form.customerCategory === "Corporate" && !form.company.trim()) {
+      alert("Company name is required for Corporate Account contacts");
+      return;
+    }
     setSaving(true);
     try {
       await fetchApi(`/api/contacts/${selectedRow.id}`, {
@@ -224,7 +241,11 @@ export default function ContactsPage() {
     setSelectedRow(row);
     const acctType = row.account?.accountType || accounts.find((a) => a.id === row.accountId)?.accountType;
     setSelectedAccountType(acctType);
+    // Infer customer category for existing contacts: if linked Account is Retail or company is empty, treat as Retail
+    const inferredCategory =
+      acctType === "Retail" || (!row.company && acctType !== "Corporate") ? "Retail" : "Corporate";
     setForm({
+      customerCategory: inferredCategory,
       salutation: row.salutation ?? "",
       firstName: row.firstName ?? "",
       lastName: row.lastName ?? "",
@@ -343,8 +364,25 @@ export default function ContactsPage() {
       ]
     : [];
 
+  const isCorporate = form.customerCategory === "Corporate";
+  const isRetail = form.customerCategory === "Retail";
+
   const renderFormFields = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="md:col-span-2">
+        <FormField
+          label="Customer Category"
+          name="customerCategory"
+          type="select"
+          value={form.customerCategory}
+          onChange={handleFieldChange}
+          required
+          options={[
+            { label: "Corporate Account", value: "Corporate" },
+            { label: "Retail Customer", value: "Retail" },
+          ]}
+        />
+      </div>
       <FormField
         label="Account"
         name="accountId"
@@ -410,13 +448,16 @@ export default function ContactsPage() {
         onChange={handleFieldChange}
         placeholder="Enter mobile"
       />
-      <FormField
-        label="Company"
-        name="company"
-        value={form.company}
-        onChange={handleFieldChange}
-        placeholder="Enter company name"
-      />
+      {!isRetail && (
+        <FormField
+          label="Company"
+          name="company"
+          value={form.company}
+          onChange={handleFieldChange}
+          required={isCorporate}
+          placeholder="Enter company name"
+        />
+      )}
       <FormField
         label="Job Title"
         name="jobTitle"
