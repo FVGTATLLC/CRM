@@ -52,11 +52,6 @@ interface Lead {
   companyIndustry?: string;
   companySize?: string;
   annualTravelSpend?: number;
-  numberOfTravelers?: number;
-  travelPolicy?: string;
-  preferredAirlines?: string;
-  preferredHotels?: string;
-  travelBookingVolume?: string;
   department?: string;
 }
 
@@ -93,11 +88,6 @@ const INITIAL_FORM: Record<string, string> = {
   companyIndustry: "",
   companySize: "",
   annualTravelSpend: "",
-  numberOfTravelers: "",
-  travelPolicy: "",
-  preferredAirlines: "",
-  preferredHotels: "",
-  travelBookingVolume: "",
   leadSource: "",
   leadStatus: "New",
   rating: "",
@@ -192,7 +182,6 @@ export default function CorporateLeadsPage() {
         leadType: "Corporate",
         estimatedValue: form.estimatedValue ? Number(form.estimatedValue) : undefined,
         annualTravelSpend: form.annualTravelSpend ? Number(form.annualTravelSpend) : undefined,
-        numberOfTravelers: form.numberOfTravelers ? Number(form.numberOfTravelers) : undefined,
         assignedToId: form.assignedToId || undefined,
         formSource: form.formSource || undefined,
         utmSource: form.utmSource || undefined,
@@ -222,7 +211,6 @@ export default function CorporateLeadsPage() {
         leadType: "Corporate",
         estimatedValue: form.estimatedValue ? Number(form.estimatedValue) : undefined,
         annualTravelSpend: form.annualTravelSpend ? Number(form.annualTravelSpend) : undefined,
-        numberOfTravelers: form.numberOfTravelers ? Number(form.numberOfTravelers) : undefined,
         assignedToId: form.assignedToId || undefined,
         formSource: form.formSource || undefined,
         utmSource: form.utmSource || undefined,
@@ -289,11 +277,6 @@ export default function CorporateLeadsPage() {
       companyIndustry: row.companyIndustry ?? "",
       companySize: row.companySize ?? "",
       annualTravelSpend: row.annualTravelSpend != null ? String(row.annualTravelSpend) : "",
-      numberOfTravelers: row.numberOfTravelers != null ? String(row.numberOfTravelers) : "",
-      travelPolicy: row.travelPolicy ?? "",
-      preferredAirlines: row.preferredAirlines ?? "",
-      preferredHotels: row.preferredHotels ?? "",
-      travelBookingVolume: row.travelBookingVolume ?? "",
       leadSource: row.leadSource ?? "",
       leadStatus: row.leadStatus ?? "New",
       rating: row.rating ?? "",
@@ -405,13 +388,6 @@ export default function CorporateLeadsPage() {
                   ? `${selectedRow.currency ?? "USD"} ${selectedRow.annualTravelSpend}`
                   : null,
             },
-            {
-              label: "Number of Travelers",
-              value:
-                selectedRow.numberOfTravelers != null
-                  ? String(selectedRow.numberOfTravelers)
-                  : null,
-            },
           ],
         },
         {
@@ -424,15 +400,6 @@ export default function CorporateLeadsPage() {
             { label: "Phone", value: selectedRow.phone },
             { label: "Job Title", value: selectedRow.jobTitle },
             { label: "Department", value: selectedRow.department },
-          ],
-        },
-        {
-          title: "Travel Requirements",
-          fields: [
-            { label: "Travel Policy", value: selectedRow.travelPolicy },
-            { label: "Preferred Airlines", value: selectedRow.preferredAirlines },
-            { label: "Preferred Hotels", value: selectedRow.preferredHotels },
-            { label: "Booking Volume", value: selectedRow.travelBookingVolume },
           ],
         },
         {
@@ -548,14 +515,6 @@ export default function CorporateLeadsPage() {
             onChange={handleFieldChange}
             placeholder="Enter annual travel spend"
           />
-          <FormField
-            label="Number of Travelers"
-            name="numberOfTravelers"
-            type="number"
-            value={form.numberOfTravelers}
-            onChange={handleFieldChange}
-            placeholder="Enter number of travelers"
-          />
         </div>
       </div>
 
@@ -623,50 +582,6 @@ export default function CorporateLeadsPage() {
             value={form.department}
             onChange={handleFieldChange}
             placeholder="Enter department"
-          />
-        </div>
-      </div>
-
-      {/* Travel Requirements */}
-      <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Travel Requirements</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <FormField
-              label="Travel Policy"
-              name="travelPolicy"
-              type="textarea"
-              value={form.travelPolicy}
-              onChange={handleFieldChange}
-              placeholder="Describe travel policy"
-            />
-          </div>
-          <FormField
-            label="Preferred Airlines"
-            name="preferredAirlines"
-            value={form.preferredAirlines}
-            onChange={handleFieldChange}
-            placeholder="e.g. Emirates, Qatar Airways"
-          />
-          <FormField
-            label="Preferred Hotels"
-            name="preferredHotels"
-            value={form.preferredHotels}
-            onChange={handleFieldChange}
-            placeholder="e.g. Marriott, Hilton"
-          />
-          <FormField
-            label="Travel Booking Volume"
-            name="travelBookingVolume"
-            type="select"
-            value={form.travelBookingVolume}
-            onChange={handleFieldChange}
-            options={[
-              { label: "1-50/month", value: "1-50/month" },
-              { label: "51-200/month", value: "51-200/month" },
-              { label: "201-500/month", value: "201-500/month" },
-              { label: "500+/month", value: "500+/month" },
-            ]}
           />
         </div>
       </div>
