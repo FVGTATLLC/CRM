@@ -43,6 +43,7 @@ interface ContactOption {
 
 interface Lead {
   id: string;
+  leadNumber?: string | null;
   leadType: string;
   firstName: string;
   lastName: string;
@@ -372,6 +373,12 @@ export default function LeadsPage() {
   };
 
   const columns: ColumnDef<Lead>[] = [
+    {
+      key: "leadNumber",
+      label: "Lead ID",
+      sortable: true,
+      render: (value: string | null) => value || "—",
+    },
     { key: "leadType", label: "Category", sortable: true },
     {
       key: "productDetails",
@@ -406,6 +413,7 @@ export default function LeadsPage() {
         const rowKind = detectCategoryKind(selectedRow.leadType);
 
         const baseFields: { label: string; value: string }[] = [
+          { label: "Lead ID", value: selectedRow.leadNumber ?? "—" },
           { label: "Category", value: selectedRow.leadType },
           { label: "Product", value: d.productName ?? "—" },
         ];

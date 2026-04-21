@@ -345,6 +345,7 @@ model Contact {
 
 model Lead {
   id              String   @id @default(cuid())
+  leadNumber      String?  @unique
   leadType        String
   segment         String?
   subSegment      String?
@@ -418,6 +419,8 @@ model Lead {
   lastModifiedById   String?
   lastModifiedByName String?
   lastModifiedAt     DateTime @updatedAt
+
+  proposals       Proposal[]
 }
 
 model Account {
@@ -604,6 +607,9 @@ model Proposal {
 
   accountId       String?
   account         Account?  @relation(fields: [accountId], references: [id])
+
+  leadId          String?
+  lead            Lead?     @relation(fields: [leadId], references: [id])
 
   ownerId         String
   owner           User      @relation(fields: [ownerId], references: [id])

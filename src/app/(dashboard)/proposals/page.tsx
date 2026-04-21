@@ -18,12 +18,24 @@ interface Account {
   name: string;
 }
 
+interface LeadOption {
+  id: string;
+  leadNumber?: string | null;
+  leadType: string;
+  leadStatus: string;
+  productDetails?: Record<string, string> | null;
+  firstName?: string;
+  lastName?: string;
+}
+
 interface Proposal {
   id: string;
   title: string;
   linkedToType?: string;
   linkedToId?: string;
   linkedToName?: string;
+  leadId?: string;
+  lead?: LeadOption;
   value?: number;
   currency?: string;
   description?: string;
@@ -42,8 +54,7 @@ interface Proposal {
 
 const INITIAL_FORM: Record<string, string> = {
   title: "",
-  linkedToType: "",
-  accountId: "",
+  leadId: "",
   value: "",
   currency: "USD",
   description: "",
@@ -51,6 +62,12 @@ const INITIAL_FORM: Record<string, string> = {
   status: "Draft",
   remarks: "",
 };
+
+function formatLeadOptionLabel(l: LeadOption): string {
+  const productName = l.productDetails?.productName ?? "";
+  const id = l.leadNumber ?? l.id.slice(0, 8);
+  return productName ? `${id} - ${productName}` : `${id} - ${(l.firstName ?? "")} ${(l.lastName ?? "")}`.trim();
+}
 
 export default function ProposalsPage() {
   const { fetchApi } = useApi();
@@ -70,20 +87,24 @@ export default function ProposalsPage() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
 
-  const [accountOptions, setAccountOptions] = useState<Account[]>([]);
+  const [newLeads, setNewLeads] = useState<LeadOption[]>([]);
 
-  const fetchAccounts = useCallback(async () => {
+  const fetchLeads = useCallback(async () => {
     try {
-      const res = await fetchApi<{ data: Account[] }>("/api/accounts?limit=100");
-      setAccountOptions(res.data ?? []);
+      const res = await fetchApi<{ data: LeadOption[] }>(
+        `/api/leads?page=1&limit=500`
+      );
+      // Only show leads still in "New" status — these are awaiting a quote
+      const onlyNew = (res.data ?? []).filter((l) => l.leadStatus === "New");
+      setNewLeads(onlyNew);
     } catch {
-      setAccountOptions([]);
+      setNewLeads([]);
     }
   }, [fetchApi]);
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    fetchLeads();
+  }, [fetchLeads]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -110,14 +131,19 @@ export default function ProposalsPage() {
   };
 
   const handleCreate = async () => {
+    if (!form.title.trim()) return alert("Title is required");
+    if (!form.leadId) return alert("Lead is required");
     setSaving(true);
     try {
-      const selectedAccount = accountOptions.find((a) => a.id === form.accountId);
       const payload = {
-        ...form,
+        title: form.title,
+        leadId: form.leadId,
         value: form.value ? Number(form.value) : undefined,
-        linkedToId: form.accountId || undefined,
-        linkedToName: selectedAccount?.name || undefined,
+        currency: form.currency,
+        description: form.description || undefined,
+        validUntil: form.validUntil || undefined,
+        status: form.status,
+        remarks: form.remarks || undefined,
       };
       await fetchApi("/api/proposals", {
         method: "POST",
@@ -126,8 +152,9 @@ export default function ProposalsPage() {
       setCreateOpen(false);
       setForm(INITIAL_FORM);
       fetchData();
-    } catch {
-      // handle error
+      fetchLeads();
+    } catch (e) {
+      if (e instanceof Error) alert(e.message);
     } finally {
       setSaving(false);
     }
@@ -135,14 +162,18 @@ export default function ProposalsPage() {
 
   const handleUpdate = async () => {
     if (!selectedRow) return;
+    if (!form.title.trim()) return alert("Title is required");
     setSaving(true);
     try {
-      const selectedAccount = accountOptions.find((a) => a.id === form.accountId);
       const payload = {
-        ...form,
+        title: form.title,
+        leadId: form.leadId || undefined,
         value: form.value ? Number(form.value) : undefined,
-        linkedToId: form.accountId || undefined,
-        linkedToName: selectedAccount?.name || undefined,
+        currency: form.currency,
+        description: form.description || undefined,
+        validUntil: form.validUntil || undefined,
+        status: form.status,
+        remarks: form.remarks || undefined,
       };
       await fetchApi(`/api/proposals/${selectedRow.id}`, {
         method: "PUT",
@@ -152,8 +183,9 @@ export default function ProposalsPage() {
       setSelectedRow(null);
       setForm(INITIAL_FORM);
       fetchData();
-    } catch {
-      // handle error
+      fetchLeads();
+    } catch (e) {
+      if (e instanceof Error) alert(e.message);
     } finally {
       setSaving(false);
     }
@@ -173,8 +205,7 @@ export default function ProposalsPage() {
     setSelectedRow(row);
     setForm({
       title: row.title ?? "",
-      linkedToType: row.linkedToType ?? "",
-      accountId: row.accountId ?? "",
+      leadId: row.leadId ?? "",
       value: row.value != null ? String(row.value) : "",
       currency: row.currency ?? "USD",
       description: row.description ?? "",
@@ -213,26 +244,9 @@ export default function ProposalsPage() {
     },
     {
       key: "linkedToName",
-      label: "Client",
+      label: "Lead",
       sortable: true,
       render: (value: string) => value || "-",
-    },
-    {
-      key: "account",
-      label: "Account",
-      sortable: false,
-      render: (_value: unknown, row: Proposal) =>
-        row.account ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/accounts`);
-            }}
-            className="text-blue-600 hover:text-blue-800 hover:underline"
-          >
-            {row.account.name}
-          </button>
-        ) : "-",
     },
     {
       key: "value",
@@ -301,19 +315,7 @@ export default function ProposalsPage() {
           title: "Proposal Information",
           fields: [
             { label: "Title", value: selectedRow.title },
-            { label: "Linked To Type", value: selectedRow.linkedToType },
-            { label: "Client", value: selectedRow.linkedToName },
-            {
-              label: "Account",
-              value: selectedRow.account?.name,
-              isLink: !!selectedRow.account,
-              onLinkClick: () => {
-                if (selectedRow.account) {
-                  setReadOpen(false);
-                  router.push(`/accounts`);
-                }
-              },
-            },
+            { label: "Lead", value: selectedRow.linkedToName },
             {
               label: "Status",
               value: selectedRow.status,
@@ -382,23 +384,31 @@ export default function ProposalsPage() {
         placeholder="Enter proposal title"
       />
       <FormField
-        label="Linked To Type"
-        name="linkedToType"
+        label="Lead"
+        name="leadId"
         type="select"
-        value={form.linkedToType}
+        value={form.leadId}
         onChange={handleFieldChange}
-        options={[
-          { label: "Account", value: "Account" },
-          { label: "Lead", value: "Lead" },
-        ]}
-      />
-      <FormField
-        label="Account"
-        name="accountId"
-        type="select"
-        value={form.accountId}
-        onChange={handleFieldChange}
-        options={accountOptions.map((a) => ({ label: a.name, value: a.id }))}
+        required
+        options={(() => {
+          const opts = newLeads.map((l) => ({
+            label: formatLeadOptionLabel(l),
+            value: l.id,
+          }));
+          // When editing an existing proposal whose lead is no longer "New",
+          // include it in the dropdown so the value is preserved.
+          if (
+            selectedRow?.lead &&
+            selectedRow.leadId &&
+            !opts.some((o) => o.value === selectedRow.leadId)
+          ) {
+            opts.unshift({
+              label: formatLeadOptionLabel(selectedRow.lead),
+              value: selectedRow.leadId,
+            });
+          }
+          return opts;
+        })()}
       />
       <FormField
         label="Value"

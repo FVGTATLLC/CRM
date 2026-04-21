@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const [data, total] = await Promise.all([
       prisma.proposal.findMany({
         where,
-        include: { owner: true, account: true },
+        include: { owner: true, account: true, lead: true },
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
@@ -65,9 +65,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       title,
-      linkedToType,
-      linkedToId,
-      linkedToName,
       value,
       currency,
       description,
@@ -75,6 +72,7 @@ export async function POST(request: Request) {
       status,
       remarks,
       accountId,
+      leadId,
     } = body;
 
     if (!title) {
@@ -84,12 +82,33 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!leadId) {
+      return NextResponse.json(
+        { success: false, error: "Lead is required" },
+        { status: 400 }
+      );
+    }
+
+    // Resolve denormalized linkedTo* from the lead so legacy fields stay populated
+    const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+    if (!lead) {
+      return NextResponse.json(
+        { success: false, error: "Selected lead not found" },
+        { status: 404 }
+      );
+    }
+    const productName = (lead.productDetails as Record<string, string> | null)?.productName ?? "";
+    const linkedToName = lead.leadNumber
+      ? `${lead.leadNumber} - ${productName}`
+      : productName || `${lead.firstName} ${lead.lastName}`.trim();
+
     const data = await prisma.proposal.create({
       data: {
         title,
-        linkedToType,
-        linkedToId,
+        linkedToType: "Lead",
+        linkedToId: leadId,
         linkedToName,
+        leadId,
         value: value ? parseFloat(value) : null,
         currency,
         description,
@@ -101,7 +120,7 @@ export async function POST(request: Request) {
         createdById: user.id,
         createdByName: `${user.firstName} ${user.lastName}`,
       },
-      include: { owner: true, account: true },
+      include: { owner: true, account: true, lead: true },
     });
 
     return NextResponse.json({ success: true, data }, { status: 201 });

@@ -133,6 +133,8 @@ export async function POST(request: Request) {
       rateRange,
       partnershipType,
       currentDistributionChannels,
+      // Product-based booking details (Lead Management form)
+      productDetails,
     } = body;
 
     if (!leadType) {
@@ -160,8 +162,34 @@ export async function POST(request: Request) {
     const { checkLeadDuplicates } = await import("@/lib/duplicateCheck");
     const duplicateWarnings = await checkLeadDuplicates(email, phone, company);
 
+    // Generate next leadNumber (LD-00001 format) atomically by picking the max existing number
+    const lastWithNumber = await prisma.lead.findFirst({
+      where: { leadNumber: { not: null } },
+      orderBy: { createdAt: "desc" },
+      select: { leadNumber: true },
+    });
+    let nextN = 1;
+    if (lastWithNumber?.leadNumber) {
+      // Find the actual max across all leads (in case createdAt order differs from numeric order)
+      const all = await prisma.lead.findMany({
+        where: { leadNumber: { not: null } },
+        select: { leadNumber: true },
+      });
+      let maxN = 0;
+      for (const l of all) {
+        const m = (l.leadNumber || "").match(/LD-(\d+)/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (n > maxN) maxN = n;
+        }
+      }
+      nextN = maxN + 1;
+    }
+    const leadNumber = `LD-${String(nextN).padStart(5, "0")}`;
+
     const data = await prisma.lead.create({
       data: {
+        leadNumber,
         leadType,
         segment,
         subSegment,
@@ -206,6 +234,7 @@ export async function POST(request: Request) {
         rateRange,
         partnershipType,
         currentDistributionChannels,
+        productDetails: productDetails && typeof productDetails === "object" ? productDetails : undefined,
         ownerId: user.id,
         createdById: user.id,
         createdByName: `${user.firstName} ${user.lastName}`,
