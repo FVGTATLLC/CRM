@@ -137,6 +137,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Corporate Accounts can only be created via Lead conversion (Signed status), not directly
+    if (accountType === "Corporate") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Corporate Accounts cannot be created directly. They are auto-created when a Corporate Lead is marked as Signed.",
+        },
+        { status: 403 }
+      );
+    }
+
     const data = await prisma.account.create({
       data: {
         accountName,

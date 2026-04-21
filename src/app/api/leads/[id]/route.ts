@@ -39,11 +39,78 @@ export async function PUT(
   try {
     const body = await request.json();
 
+    // Fetch prior state so we can detect a transition to "Signed"
+    const prior = await prisma.lead.findUnique({ where: { id } });
+    if (!prior) {
+      return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+    }
+
     const lead = await prisma.lead.update({
       where: { id },
       data: body,
       include: { owner: true },
     });
+
+    // Auto-convert Corporate Lead to Account when status transitions to "Signed"
+    const becameSigned =
+      prior.leadStatus !== "Signed" && lead.leadStatus === "Signed";
+
+    if (
+      becameSigned &&
+      lead.leadType === "Corporate" &&
+      !lead.isConverted
+    ) {
+      const account = await prisma.account.create({
+        data: {
+          accountName: lead.company || `${lead.firstName} ${lead.lastName}`,
+          accountType: "Corporate",
+          segment: lead.segment,
+          subSegment: lead.subSegment,
+          type: lead.type,
+          industry: lead.companyIndustry,
+          companySize: lead.companySize,
+          annualTravelSpend: lead.annualTravelSpend,
+          email: lead.email,
+          phone: lead.phone,
+          address: lead.address,
+          city: lead.city,
+          state: lead.state,
+          country: lead.country,
+          zipCode: lead.zipCode,
+          accountStatus: "Active",
+          ownerId: lead.ownerId,
+          createdByName: "Auto-converted from Lead",
+        },
+      });
+
+      // Create primary Contact linked to the new Account
+      await prisma.contact.create({
+        data: {
+          salutation: lead.salutation,
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          email: lead.email,
+          phone: lead.phone,
+          mobile: lead.mobile,
+          company: lead.company,
+          jobTitle: lead.jobTitle,
+          contactType: "Corporate",
+          contactStatus: "Active",
+          accountId: account.id,
+          ownerId: lead.ownerId,
+          createdByName: "Auto-converted from Lead",
+        },
+      });
+
+      await prisma.lead.update({
+        where: { id },
+        data: {
+          isConverted: true,
+          convertedAt: new Date(),
+          convertedToAccountId: account.id,
+        },
+      });
+    }
 
     return NextResponse.json(lead);
   } catch (error) {

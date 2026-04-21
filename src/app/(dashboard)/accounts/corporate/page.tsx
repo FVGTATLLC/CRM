@@ -338,10 +338,6 @@ export default function CorporateAccountsPage() {
         onPageChange={setPage}
         onLimitChange={setLimit}
         onSearch={setSearch}
-        onCreate={() => {
-          setForm(INITIAL_FORM);
-          setCreateOpen(true);
-        }}
         onRowClick={openRead}
         onEdit={openEdit}
         onDelete={handleDelete}
