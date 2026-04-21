@@ -89,11 +89,15 @@ export async function POST(request: Request) {
       roleTag,
       remarks,
       accountId,
+      customerCategory,
     } = body;
 
-    if (!accountId) {
+    // customerCategory drives Corporate vs Retail; persisted in contactType
+    const resolvedContactType = customerCategory || contactType;
+
+    if (resolvedContactType === "Corporate" && !accountId) {
       return NextResponse.json(
-        { success: false, error: "Account is required" },
+        { success: false, error: "Corporate Account is required for Corporate contacts" },
         { status: 400 }
       );
     }
@@ -128,12 +132,12 @@ export async function POST(request: Request) {
         state,
         country,
         zipCode,
-        contactType,
+        contactType: resolvedContactType,
         contactSource,
         contactStatus: contactStatus || "Active",
         roleTag,
         remarks,
-        accountId,
+        accountId: accountId || null,
         ownerId: user.id,
         createdById: user.id,
         createdByName: `${user.firstName} ${user.lastName}`,

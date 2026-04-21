@@ -38,6 +38,7 @@ interface ContactOption {
   lastName: string;
   email?: string;
   phone?: string;
+  contactType?: string;
 }
 
 interface Lead {
@@ -65,8 +66,9 @@ function detectCategoryKind(categoryName: string): CategoryKind {
   return "other";
 }
 
-function hasClientType(kind: CategoryKind): boolean {
-  return kind === "hotels" || kind === "excursions" || kind === "packages";
+// Customer Category (Corporate / Retail) is required for ALL categories now
+function hasClientType(_kind: CategoryKind): boolean {
+  return true;
 }
 
 const INITIAL_FORM: Record<string, string> = {
@@ -499,7 +501,7 @@ export default function LeadsPage() {
           />
           {form.clientType === "Corporate" && (
             <FormField
-              label="Corporate Account"
+              label="Customer Name"
               name="corporateAccountId"
               type="select"
               value={form.corporateAccountId}
@@ -510,16 +512,18 @@ export default function LeadsPage() {
           )}
           {form.clientType === "Retail" && (
             <FormField
-              label="Retail Contact"
+              label="Customer Name"
               name="contactId"
               type="select"
               value={form.contactId}
               onChange={handleFieldChange}
               required
-              options={contacts.map((c) => ({
-                label: `${c.firstName} ${c.lastName}${c.email ? ` (${c.email})` : ""}`,
-                value: c.id,
-              }))}
+              options={contacts
+                .filter((c) => c.contactType === "Retail")
+                .map((c) => ({
+                  label: `${c.firstName} ${c.lastName}${c.email ? ` (${c.email})` : ""}`,
+                  value: c.id,
+                }))}
             />
           )}
         </>

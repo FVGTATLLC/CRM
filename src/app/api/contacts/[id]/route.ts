@@ -39,9 +39,19 @@ export async function PUT(
   try {
     const body = await request.json();
 
+    // Map UI's customerCategory → contactType, strip non-DB fields
+    const { customerCategory, ...rest } = body;
+    const data: Record<string, unknown> = { ...rest };
+    if (customerCategory !== undefined) {
+      data.contactType = customerCategory;
+    }
+    if ((data.accountId as unknown) === "") {
+      data.accountId = null;
+    }
+
     const contact = await prisma.contact.update({
       where: { id },
-      data: body,
+      data,
       include: { owner: true, account: true },
     });
 
