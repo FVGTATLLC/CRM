@@ -767,6 +767,19 @@ model ApprovalStep {
 
 // ==================== PRODUCT MODULE ====================
 
+model ProductCategory {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  isActive      Boolean  @default(true)
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+  lastModifiedById   String?
+  lastModifiedByName String?
+  lastModifiedAt     DateTime @updatedAt
+}
+
 model Product {
   id          String   @id @default(cuid())
   category    String

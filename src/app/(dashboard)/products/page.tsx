@@ -22,6 +22,12 @@ interface Product {
   lastModifiedAt?: string;
 }
 
+interface CategoryOption {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 const INITIAL_FORM: Record<string, string> = {
   category: "",
   name: "",
@@ -47,6 +53,23 @@ export default function ProductsPage() {
   const [selectedRow, setSelectedRow] = useState<Product | null>(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
+
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+
+  // Load categories from Product Configuration
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await fetchApi<{ data: CategoryOption[] }>(
+          `/api/product-categories?activeOnly=true`
+        );
+        setCategories(res.data ?? []);
+      } catch {
+        setCategories([]);
+      }
+    };
+    loadCategories();
+  }, [fetchApi]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -242,10 +265,11 @@ export default function ProductsPage() {
       <FormField
         label="Category"
         name="category"
+        type="select"
         value={form.category}
         onChange={handleFieldChange}
         required
-        placeholder="e.g. Flights, Hotels, Packages"
+        options={categories.map((c) => ({ label: c.name, value: c.name }))}
       />
       <FormField
         label="Name"

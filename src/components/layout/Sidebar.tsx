@@ -34,6 +34,7 @@ import {
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/hooks/useAuth";
 
 // ---------------------------------------------------------------------------
 // Zustand store -- sidebar expanded / collapsed state
@@ -62,6 +63,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   href: string;
+  superAdminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -84,6 +86,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Check-Ins", icon: MapPin, href: "/activities/check-ins" },
   { label: "Proposals", icon: FileText, href: "/proposals" },
   { label: "Products", icon: Package, href: "/products" },
+  { label: "Product Configuration", icon: Package, href: "/product-configuration", superAdminOnly: true },
   { label: "KYB Compliance", icon: ShieldCheck, href: "/kyb" },
   { label: "Approvals", icon: CheckSquare, href: "/approvals" },
   { label: "Reports", icon: BarChart3, href: "/reports" },
@@ -100,6 +103,10 @@ const MOBILE_BREAKPOINT = 768;
 export default function Sidebar() {
   const pathname = usePathname();
   const { expanded, toggle, setExpanded } = useSidebarStore();
+  const { user } = useAuthStore();
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => !item.superAdminOnly || user?.userType === "SuperAdmin"
+  );
 
   // ---- Responsive: auto-collapse on mobile ---------------------------------
   const handleResize = useCallback(() => {
@@ -194,7 +201,7 @@ export default function Sidebar() {
       {/* ------- Navigation list ------- */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
         <ul className="flex flex-col gap-1">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
 
