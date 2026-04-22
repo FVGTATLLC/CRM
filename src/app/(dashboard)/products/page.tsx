@@ -16,6 +16,7 @@ type ProductCategoryKind =
   | "carRentals"
   | "excursions"
   | "packages"
+  | "visa"
   | "generic";
 
 interface Product {
@@ -48,6 +49,7 @@ function detectCategoryKind(categoryName: string): ProductCategoryKind {
   if (c.includes("car")) return "carRentals";
   if (c.includes("excursion")) return "excursions";
   if (c.includes("package")) return "packages";
+  if (c.includes("visa")) return "visa";
   return "generic";
 }
 
@@ -113,6 +115,16 @@ const PACKAGE_FIELDS = [
   "itinerary",
 ];
 
+const VISA_FIELDS = [
+  "visaCountry",
+  "visaType",
+  "processingTime",
+  "documentsRequired",
+  "heroTag",
+  "overview",
+  "notes",
+];
+
 function buildEmptyDetails(kind: ProductCategoryKind): Record<string, string> {
   const keys =
     kind === "hotels"
@@ -123,6 +135,8 @@ function buildEmptyDetails(kind: ProductCategoryKind): Record<string, string> {
       ? EXCURSION_FIELDS
       : kind === "packages"
       ? PACKAGE_FIELDS
+      : kind === "visa"
+      ? VISA_FIELDS
       : [];
   const out: Record<string, string> = {};
   for (const k of keys) out[k] = "";
@@ -448,6 +462,19 @@ export default function ProductsPage() {
           detailField("Itinerary", "itinerary"),
         ],
       };
+    } else if (rowKind === "visa") {
+      detailsSection = {
+        title: "Visa Details",
+        fields: [
+          detailField("Visa Country", "visaCountry"),
+          detailField("Type of Visa", "visaType"),
+          detailField("Processing Time", "processingTime"),
+          detailField("Documents Required", "documentsRequired"),
+          detailField("Hero Tag", "heroTag"),
+          detailField("Overview", "overview"),
+          detailField("Notes", "notes"),
+        ],
+      };
     }
   }
 
@@ -496,6 +523,8 @@ export default function ProductsPage() {
       ? "Car Name"
       : kind === "packages"
       ? "Package Name"
+      : kind === "visa"
+      ? "Visa Name"
       : "Name";
 
   const renderHotelFields = () => (
@@ -890,6 +919,70 @@ export default function ProductsPage() {
     </>
   );
 
+  const renderVisaFields = () => (
+    <>
+      <FormField
+        label="Visa Country"
+        name="visaCountry"
+        value={form.visaCountry ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. United Arab Emirates"
+      />
+      <FormField
+        label="Type of Visa"
+        name="visaType"
+        value={form.visaType ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. Tourist, Business, Transit"
+      />
+      <FormField
+        label="Processing Time"
+        name="processingTime"
+        value={form.processingTime ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. 3-5 working days"
+      />
+      <FormField
+        label="Hero Tag"
+        name="heroTag"
+        value={form.heroTag ?? ""}
+        onChange={handleFieldChange}
+        placeholder="e.g. Fastest Visa Service"
+      />
+      <div className="md:col-span-2">
+        <FormField
+          label="Documents Required"
+          name="documentsRequired"
+          type="textarea"
+          value={form.documentsRequired ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+          placeholder="Passport copy, photo, application form, etc."
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Overview"
+          name="overview"
+          type="textarea"
+          value={form.overview ?? ""}
+          onChange={handleFieldChange}
+          rows={3}
+        />
+      </div>
+      <div className="md:col-span-2">
+        <FormField
+          label="Notes"
+          name="notes"
+          type="textarea"
+          value={form.notes ?? ""}
+          onChange={handleFieldChange}
+          rows={2}
+        />
+      </div>
+    </>
+  );
+
   const renderFormFields = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormField
@@ -934,6 +1027,7 @@ export default function ProductsPage() {
       {kind === "carRentals" && renderCarFields()}
       {kind === "excursions" && renderExcursionFields()}
       {kind === "packages" && renderPackageFields()}
+      {kind === "visa" && renderVisaFields()}
 
       <div className="md:col-span-2">
         <FormField
