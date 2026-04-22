@@ -58,6 +58,14 @@ export async function PUT(
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
 
+    // Closed leads are immutable
+    if (prior.leadStatus === "Closed") {
+      return NextResponse.json(
+        { error: "Closed leads cannot be edited" },
+        { status: 403 }
+      );
+    }
+
     const lead = await prisma.lead.update({
       where: { id },
       data: body,
@@ -142,6 +150,17 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    const lead = await prisma.lead.findUnique({ where: { id } });
+    if (!lead) {
+      return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+    }
+    if (lead.leadStatus === "Closed") {
+      return NextResponse.json(
+        { error: "Closed leads cannot be deleted" },
+        { status: 403 }
+      );
+    }
+
     await prisma.lead.delete({
       where: { id },
     });

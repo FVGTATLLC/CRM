@@ -358,16 +358,24 @@ export default function LeadsPage() {
   };
 
   const handleDelete = async (row: Lead) => {
+    if (row.leadStatus === "Closed") {
+      alert("Closed leads cannot be deleted.");
+      return;
+    }
     if (!confirm(`Delete this lead? This cannot be undone.`)) return;
     try {
       await fetchApi(`/api/leads/${row.id}`, { method: "DELETE" });
       fetchData();
-    } catch {
-      // ignore
+    } catch (e) {
+      if (e instanceof Error) alert(e.message);
     }
   };
 
   const openEdit = (row: Lead) => {
+    if (row.leadStatus === "Closed") {
+      alert("Closed leads cannot be edited.");
+      return;
+    }
     setSelectedRow(row);
     const d = (row.productDetails as Record<string, string>) || {};
     setForm({
