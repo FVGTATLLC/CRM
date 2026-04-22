@@ -245,6 +245,7 @@ export default function CorporateAccountsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Account Name" name="accountName" value={form.accountName} onChange={handleFieldChange} required placeholder="Enter account name" />
           <FormField label="Industry" name="industry" type="select" value={form.industry} onChange={handleFieldChange} required options={[
+            { label: "Travel & Tourism", value: "Travel & Tourism" },
             { label: "Technology", value: "Technology" },
             { label: "Finance", value: "Finance" },
             { label: "Healthcare", value: "Healthcare" },
