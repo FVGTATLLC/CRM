@@ -600,7 +600,7 @@ export default function LeadsPage() {
       )}
 
       <FormField
-        label="Lead Value"
+        label="Total Lead Value"
         name="estimatedValue"
         type="number"
         value={form.estimatedValue}
