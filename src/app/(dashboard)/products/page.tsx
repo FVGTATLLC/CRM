@@ -1,12 +1,104 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import DataTable from "@/components/table/DataTable";
 import FormModal from "@/components/forms/FormModal";
 import FormField from "@/components/forms/FormField";
 import ReadView from "@/components/forms/ReadView";
 import { useApi } from "@/hooks/useAuth";
 import type { ColumnDef } from "@/components/table/DataTable";
+
+// ---------------------------------------------------------------------------
+// Available countries (extend this list anytime)
+// ---------------------------------------------------------------------------
+const AVAILABLE_COUNTRIES = ["India", "United Arab Emirates"];
+
+// ---------------------------------------------------------------------------
+// Multi-select dropdown for countries (inline, self-contained)
+// ---------------------------------------------------------------------------
+interface CountryMultiSelectProps {
+  label: string;
+  value: string; // comma-separated
+  onChange: (next: string) => void;
+  options: string[];
+  required?: boolean;
+}
+function CountryMultiSelect({
+  label,
+  value,
+  onChange,
+  options,
+  required,
+}: CountryMultiSelectProps) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selected = value
+    ? value.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const toggle = (country: string) => {
+    const next = selected.includes(country)
+      ? selected.filter((c) => c !== country)
+      : [...selected, country];
+    onChange(next.join(", "));
+  };
+
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium text-gray-700">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <div ref={containerRef} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-left flex items-center justify-between hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <span className={selected.length === 0 ? "text-gray-400" : "text-gray-900"}>
+            {selected.length === 0
+              ? "Select countries..."
+              : `${selected.length} selected: ${selected.join(", ")}`}
+          </span>
+          <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {open && (
+          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {options.map((country) => {
+              const checked = selected.includes(country);
+              return (
+                <label
+                  key={country}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggle(country)}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span>{country}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -152,6 +244,7 @@ const INITIAL_FORM: Record<string, string> = {
   imageUrl: "",
   description: "",
   status: "Active",
+  countriesToShow: "",
 };
 
 // ---------------------------------------------------------------------------
@@ -218,10 +311,13 @@ export default function ProductsPage() {
       if (name === "category") {
         // Reset all detail fields when switching category
         const newKind = detectCategoryKind(String(value));
-        // Drop any prior detail keys
+        // Drop any prior detail keys, but preserve countriesToShow which is
+        // a cross-category attribute
         const cleaned: Record<string, string> = {};
         for (const k of Object.keys(next)) {
-          if (COMMON_FORM_KEYS.includes(k)) cleaned[k] = next[k];
+          if (COMMON_FORM_KEYS.includes(k) || k === "countriesToShow") {
+            cleaned[k] = next[k];
+          }
         }
         return { ...cleaned, ...buildEmptyDetails(newKind) };
       }
@@ -330,6 +426,7 @@ export default function ProductsPage() {
       imageUrl: row.imageUrl ?? "",
       description: row.description ?? "",
       status: row.status ?? "Active",
+      countriesToShow: detailsState.countriesToShow ?? "",
       ...detailsState,
     });
     setEditOpen(true);
@@ -500,6 +597,12 @@ export default function ProductsPage() {
             },
             { label: "Description", value: selectedRow.description ?? "" },
             { label: "Image URL", value: selectedRow.imageUrl ?? "" },
+            {
+              label: "Countries to Show",
+              value:
+                (selectedRow.details as Record<string, string> | null)?.countriesToShow ??
+                "",
+            },
           ],
         },
         ...(detailsSection ? [detailsSection] : []),
@@ -993,6 +1096,12 @@ export default function ProductsPage() {
         onChange={handleFieldChange}
         required
         options={categories.map((c) => ({ label: c.name, value: c.name }))}
+      />
+      <CountryMultiSelect
+        label="Countries to Show"
+        value={form.countriesToShow ?? ""}
+        onChange={(next) => handleFieldChange("countriesToShow", next)}
+        options={AVAILABLE_COUNTRIES}
       />
       <FormField
         label={nameLabel}
