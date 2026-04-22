@@ -135,6 +135,9 @@ export async function POST(request: Request) {
       currentDistributionChannels,
       // Product-based booking details (Lead Management form)
       productDetails,
+      // Assignment
+      assignedToId,
+      assignedToName,
     } = body;
 
     if (!leadType) {
@@ -241,6 +244,8 @@ export async function POST(request: Request) {
         partnershipType,
         currentDistributionChannels,
         productDetails: productDetails && typeof productDetails === "object" ? productDetails : undefined,
+        assignedToId: assignedToId || null,
+        assignedToName: assignedToName || null,
         ownerId: user.id,
         createdById: user.id,
         createdByName: `${user.firstName} ${user.lastName}`,

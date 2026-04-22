@@ -41,6 +41,14 @@ interface ContactOption {
   contactType?: string;
 }
 
+interface UserOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  userStatus?: string;
+}
+
 interface Lead {
   id: string;
   leadNumber?: string | null;
@@ -53,6 +61,8 @@ interface Lead {
   leadStatus: string;
   estimatedValue?: number | null;
   currency?: string | null;
+  assignedToId?: string | null;
+  assignedToName?: string | null;
   productDetails?: Record<string, string> | null;
   createdAt?: string;
 }
@@ -105,6 +115,7 @@ const INITIAL_FORM: Record<string, string> = {
 
   estimatedValue: "",
   currency: "USD",
+  assignedToId: "",
   notes: "",
   leadStatus: "New",
 };
@@ -133,20 +144,24 @@ export default function LeadsPage() {
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
 
   useEffect(() => {
     const loadAll = async () => {
       try {
-        const [catRes, prodRes, acctRes, contactRes] = await Promise.all([
+        const [catRes, prodRes, acctRes, contactRes, userRes] = await Promise.all([
           fetchApi<{ data: CategoryOption[] }>(`/api/product-categories?activeOnly=true`),
           fetchApi<{ data: ProductOption[] }>(`/api/products?page=1&limit=500`),
           fetchApi<{ data: AccountOption[] }>(`/api/accounts?accountType=Corporate&page=1&limit=500`),
           fetchApi<{ data: ContactOption[] }>(`/api/contacts?page=1&limit=500`),
+          fetchApi<{ data: UserOption[] }>(`/api/users?page=1&limit=500`),
         ]);
         setCategories(catRes.data ?? []);
         setProducts(prodRes.data ?? []);
         setAccounts(acctRes.data ?? []);
         setContacts(contactRes.data ?? []);
+        // Only show Active users in the assignment dropdown
+        setUsers((userRes.data ?? []).filter((u) => !u.userStatus || u.userStatus === "Active"));
       } catch {
         // ignore
       }
@@ -250,6 +265,8 @@ export default function LeadsPage() {
       ["travelStartDate", "adults", "children", "infants"].forEach(keep);
     }
 
+    const assignedUser = users.find((u) => u.id === form.assignedToId);
+
     return {
       leadType: form.category || "Other",
       firstName,
@@ -260,6 +277,10 @@ export default function LeadsPage() {
       leadStatus: form.leadStatus || "New",
       estimatedValue: form.estimatedValue ? parseFloat(form.estimatedValue) : undefined,
       currency: form.estimatedValue ? form.currency || "USD" : undefined,
+      assignedToId: form.assignedToId || undefined,
+      assignedToName: assignedUser
+        ? `${assignedUser.firstName} ${assignedUser.lastName}`.trim()
+        : undefined,
       productDetails,
     };
   }
@@ -289,6 +310,9 @@ export default function LeadsPage() {
     }
     if (kind === "packages" && !form.travelStartDate) {
       return "Travel Start Date is required";
+    }
+    if (!form.assignedToId) {
+      return "Assigned Person is required";
     }
     return null;
   };
@@ -369,6 +393,7 @@ export default function LeadsPage() {
       travelStartDate: d.travelStartDate ?? "",
       estimatedValue: row.estimatedValue != null ? String(row.estimatedValue) : "",
       currency: row.currency ?? "USD",
+      assignedToId: row.assignedToId ?? "",
       notes: d.notes ?? "",
       leadStatus: row.leadStatus ?? "New",
     });
@@ -413,6 +438,12 @@ export default function LeadsPage() {
           : "—",
     },
     {
+      key: "assignedToName",
+      label: "Assigned Person",
+      sortable: true,
+      render: (value: string | null) => value || "—",
+    },
+    {
       key: "leadStatus",
       label: "Status",
       sortable: true,
@@ -448,6 +479,9 @@ export default function LeadsPage() {
             label: "Value",
             value: `${selectedRow.currency ?? ""} ${Number(selectedRow.estimatedValue).toLocaleString()}`.trim(),
           });
+        }
+        if (selectedRow.assignedToName) {
+          baseFields.push({ label: "Assigned Person", value: selectedRow.assignedToName });
         }
 
         const detailFields: { label: string; value: string }[] = [];
@@ -622,6 +656,18 @@ export default function LeadsPage() {
           { label: "KES", value: "KES" },
           { label: "THB", value: "THB" },
         ]}
+      />
+      <FormField
+        label="Assigned Person"
+        name="assignedToId"
+        type="select"
+        value={form.assignedToId}
+        onChange={handleFieldChange}
+        required
+        options={users.map((u) => ({
+          label: `${u.firstName} ${u.lastName}${u.email ? ` (${u.email})` : ""}`,
+          value: u.id,
+        }))}
       />
       <FormField
         label="Status"
