@@ -151,6 +151,19 @@ export async function POST(request: Request) {
       );
     }
 
+    if (estimatedValue !== undefined && estimatedValue !== null && estimatedValue !== "" && Number(estimatedValue) < 0) {
+      return NextResponse.json(
+        { success: false, error: "Lead value cannot be negative" },
+        { status: 400 }
+      );
+    }
+    if (annualTravelSpend !== undefined && annualTravelSpend !== null && annualTravelSpend !== "" && Number(annualTravelSpend) < 0) {
+      return NextResponse.json(
+        { success: false, error: "Annual travel spend cannot be negative" },
+        { status: 400 }
+      );
+    }
+
     // Check for duplicate leads before creation
     const { checkLeadDuplicates } = await import("@/lib/duplicateCheck");
     const duplicateWarnings = await checkLeadDuplicates(email, phone, company);

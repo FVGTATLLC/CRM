@@ -75,11 +75,19 @@ export default function FormField({
           name={name}
           type={type}
           value={value}
-          onChange={handleChange}
+          onChange={(e) => {
+            // Numbers cannot be negative anywhere in the app
+            if (type === "number" && e.target.value !== "" && Number(e.target.value) < 0) {
+              onChange(name, "0");
+              return;
+            }
+            handleChange(e);
+          }}
           required={required}
           disabled={disabled}
           readOnly={readOnly}
           placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+          {...(type === "number" ? { min: 0, step: "any" } : {})}
           className={baseClasses}
         />
       )}

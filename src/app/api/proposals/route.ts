@@ -89,6 +89,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (value !== undefined && value !== null && value !== "" && Number(value) < 0) {
+      return NextResponse.json(
+        { success: false, error: "Proposal value cannot be negative" },
+        { status: 400 }
+      );
+    }
+
     // Resolve denormalized linkedTo* from the lead so legacy fields stay populated
     const lead = await prisma.lead.findUnique({ where: { id: leadId } });
     if (!lead) {

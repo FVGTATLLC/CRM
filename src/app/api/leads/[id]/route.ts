@@ -39,6 +39,19 @@ export async function PUT(
   try {
     const body = await request.json();
 
+    if (body.estimatedValue !== undefined && body.estimatedValue !== null && body.estimatedValue !== "" && Number(body.estimatedValue) < 0) {
+      return NextResponse.json(
+        { error: "Lead value cannot be negative" },
+        { status: 400 }
+      );
+    }
+    if (body.annualTravelSpend !== undefined && body.annualTravelSpend !== null && body.annualTravelSpend !== "" && Number(body.annualTravelSpend) < 0) {
+      return NextResponse.json(
+        { error: "Annual travel spend cannot be negative" },
+        { status: 400 }
+      );
+    }
+
     // Fetch prior state so we can detect a transition to "Signed"
     const prior = await prisma.lead.findUnique({ where: { id } });
     if (!prior) {

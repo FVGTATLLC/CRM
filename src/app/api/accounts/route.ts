@@ -137,6 +137,19 @@ export async function POST(request: Request) {
       );
     }
 
+    if (annualRevenue !== undefined && annualRevenue !== null && annualRevenue !== "" && Number(annualRevenue) < 0) {
+      return NextResponse.json(
+        { success: false, error: "Annual revenue cannot be negative" },
+        { status: 400 }
+      );
+    }
+    if (annualTravelSpend !== undefined && annualTravelSpend !== null && annualTravelSpend !== "" && Number(annualTravelSpend) < 0) {
+      return NextResponse.json(
+        { success: false, error: "Annual travel spend cannot be negative" },
+        { status: 400 }
+      );
+    }
+
     // Corporate Accounts can only be created via Lead conversion (Signed status), not directly
     if (accountType === "Corporate") {
       return NextResponse.json(

@@ -39,6 +39,12 @@ export async function PUT(
   try {
     const body = await request.json();
 
+    if (body.value !== undefined && body.value !== null && body.value !== "" && Number(body.value) < 0) {
+      return NextResponse.json(
+        { error: "Proposal value cannot be negative" },
+        { status: 400 }
+      );
+    }
     if (body.value) body.value = parseFloat(body.value);
     if (body.validUntil) body.validUntil = new Date(body.validUntil);
 
