@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import DataTable from "@/components/table/DataTable";
 import FormModal from "@/components/forms/FormModal";
 import FormField from "@/components/forms/FormField";
+import PhoneInput from "@/components/forms/PhoneInput";
 import ReadView from "@/components/forms/ReadView";
 import ActivityTimeline from "@/components/timeline/ActivityTimeline";
 import { useApi } from "@/hooks/useAuth";
@@ -433,22 +434,20 @@ export default function ContactsPage() {
         onChange={handleFieldChange}
         placeholder="Enter email"
       />
-      <FormField
+      <PhoneInput
         label="Phone"
         name="phone"
-        type="tel"
         value={form.phone}
-        onChange={handleFieldChange}
-        placeholder="Enter phone"
+        onChange={(n, v) => handleFieldChange(n, v)}
+        country={form.country}
       />
       {!isRetail && (
-        <FormField
+        <PhoneInput
           label="Mobile"
           name="mobile"
-          type="tel"
           value={form.mobile}
-          onChange={handleFieldChange}
-          placeholder="Enter mobile"
+          onChange={(n, v) => handleFieldChange(n, v)}
+          country={form.country}
         />
       )}
       {!isRetail && (
