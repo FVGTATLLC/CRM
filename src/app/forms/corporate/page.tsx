@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import PhoneInput from "@/components/forms/PhoneInput";
 
 const SOURCES = ["Website", "Facebook Ads", "LinkedIn Ads", "Google Ads", "Referral", "Direct", "Trade Show", "Email Campaign", "Partner", "Other"];
 const INDUSTRIES = ["Technology", "Finance", "Healthcare", "Manufacturing", "Retail", "Travel", "Education", "Government", "Energy", "Real Estate", "Other"];
@@ -102,10 +103,7 @@ export default function CorporateLeadForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label>
               <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-            </div>
+            <PhoneInput label="Phone" name="phone" value={form.phone} onChange={(_, v) => set("phone", v)} />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
               <input type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />

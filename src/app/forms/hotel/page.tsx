@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import PhoneInput from "@/components/forms/PhoneInput";
 
 const SOURCES = ["Website", "Facebook Ads", "LinkedIn Ads", "Google Ads", "Referral", "Direct", "Trade Show", "Email Campaign", "Partner", "Other"];
 const COUNTRIES = ["United Arab Emirates", "India", "Kenya", "Nigeria", "United Kingdom", "United States", "Thailand", "South Africa", "Saudi Arabia", "Qatar", "Oman", "Bahrain", "Egypt", "Tanzania", "Uganda", "Ghana", "France", "Germany", "Italy", "Spain", "Other"];
@@ -94,7 +95,7 @@ export default function HotelLeadForm() {
             <div><label className="block text-sm font-medium text-gray-700 mb-1">First Name <span className="text-red-500">*</span></label><input type="text" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Last Name <span className="text-red-500">*</span></label><input type="text" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label><input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" required /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+            <PhoneInput label="Phone" name="phone" value={form.phone} onChange={(_, v) => set("phone", v)} country={form.country} />
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label><input type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">How did you hear about us?</label>

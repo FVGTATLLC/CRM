@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import DataTable from "@/components/table/DataTable";
 import FormModal from "@/components/forms/FormModal";
 import FormField from "@/components/forms/FormField";
+import PhoneInput from "@/components/forms/PhoneInput";
 import ReadView from "@/components/forms/ReadView";
 import { useApi } from "@/hooks/useAuth";
 import type { ColumnDef } from "@/components/table/DataTable";
@@ -328,13 +329,11 @@ export default function UsersPage() {
         required={!isEditMode}
         placeholder={isEditMode ? "Leave blank to keep current password" : "Enter password"}
       />
-      <FormField
+      <PhoneInput
         label="Phone"
         name="phone"
-        type="tel"
         value={form.phone}
-        onChange={handleFieldChange}
-        placeholder="Enter phone"
+        onChange={(n, v) => handleFieldChange(n, v)}
       />
       <FormField
         label="Designation"

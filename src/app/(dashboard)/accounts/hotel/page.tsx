@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DataTable from "@/components/table/DataTable";
 import FormModal from "@/components/forms/FormModal";
 import FormField from "@/components/forms/FormField";
+import PhoneInput from "@/components/forms/PhoneInput";
 import Account360View from "@/components/account/Account360View";
 import { useApi } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/utils";
@@ -334,7 +335,7 @@ export default function HotelAccountsPage() {
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-3">Contact</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Phone" name="phone" type="tel" value={form.phone} onChange={handleFieldChange} placeholder="Enter phone" />
+          <PhoneInput label="Phone" name="phone" value={form.phone} onChange={(n, v) => handleFieldChange(n, v)} country={form.country} />
           <FormField label="Email" name="email" type="email" value={form.email} onChange={handleFieldChange} placeholder="Enter email" />
           <FormField label="Website" name="website" value={form.website} onChange={handleFieldChange} placeholder="Enter website URL" />
           <div className="md:col-span-2">
