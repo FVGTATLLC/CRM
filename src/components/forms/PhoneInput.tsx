@@ -190,7 +190,7 @@ export default function PhoneInput({
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
 
-      <div ref={containerRef} className="flex">
+      <div ref={containerRef} className="relative flex">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -215,7 +215,7 @@ export default function PhoneInput({
         />
 
         {open && (
-          <div className="absolute z-20 mt-10 w-72 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-hidden flex flex-col">
+          <div className="absolute left-0 top-full mt-1 z-20 w-72 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-hidden flex flex-col">
             <div className="p-2 border-b border-gray-100">
               <input
                 type="text"
