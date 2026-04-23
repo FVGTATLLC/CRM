@@ -164,16 +164,6 @@ export default function CorporateAccountsPage() {
     }
   };
 
-  const handleDelete = async (row: Account) => {
-    if (!confirm("Are you sure you want to delete this account?")) return;
-    try {
-      await fetchApi(`/api/accounts/${row.id}`, { method: "DELETE" });
-      fetchData();
-    } catch {
-      // handle error
-    }
-  };
-
   const openEdit = (row: Account) => {
     setSelectedRow(row);
     setForm({
@@ -342,7 +332,6 @@ export default function CorporateAccountsPage() {
         onSearch={setSearch}
         onRowClick={openRead}
         onEdit={openEdit}
-        onDelete={handleDelete}
         onExport={() => {}}
       />
 
